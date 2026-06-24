@@ -3,9 +3,9 @@ import useToastStore from '../store/toastStore'
 import api from '../services/api'
 
 export default function useLetter() {
-  const [letterContent, setLetterContent] = useState('')
-  const [letterId, setLetterId] = useState(null)
+  const [letter, setLetter] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const addToast = useToastStore((s) => s.addToast)
 
   const generateLetter = useCallback(async (form) => {
@@ -19,11 +19,17 @@ export default function useLetter() {
         info_source: form.infoSource || '',
         recipient_title: form.recipientTitle || 'HRD',
         highlights: form.highlights || [],
+        personal: form.personal || {},
+        attachments: form.attachments || [],
+        custom_attachment: form.customAttachment || '',
+        city: form.city || '',
+        letter_date: form.letterDate || '',
+        relevant_experience: form.relevantExperience || '',
       })
-      const content = response.data.data.content
-      setLetterContent(content)
+      const data = response.data.data
+      setLetter(data)
       addToast('Surat lamaran berhasil digenerate!', 'success')
-      return content
+      return data
     } catch (err) {
       const message = err.response?.data?.error || 'Gagal generate surat'
       addToast(message, 'error')
@@ -33,28 +39,26 @@ export default function useLetter() {
     }
   }, [addToast])
 
-  const saveLetter = useCallback(async ({ position, company }) => {
+  const clearLetter = useCallback(() => setLetter(null), [])
+
+  const saveLetter = useCallback(async () => {
+    if (!letter) return
+    setSaving(true)
     try {
-      if (letterId) {
-        await api.put(`/api/letter/${letterId}`, {
-          position,
-          company,
-          content: letterContent,
-        })
-      } else {
-        const response = await api.post('/api/letter', {
-          position,
-          company,
-          content: letterContent,
-        })
-        setLetterId(response.data.data.id)
-      }
+      await api.post('/api/letter', {
+        cv_id: letter.cv_id || null,
+        position: letter.position,
+        company: letter.company,
+        content: letter.content || '',
+      })
       addToast('Surat berhasil disimpan!', 'success')
     } catch (err) {
       const message = err.response?.data?.error || 'Gagal menyimpan surat'
       addToast(message, 'error')
+    } finally {
+      setSaving(false)
     }
-  }, [letterId, letterContent, addToast])
+  }, [letter, addToast])
 
-  return { letterContent, setLetterContent, generateLetter, saveLetter, loading }
+  return { letter, setLetter, clearLetter, generateLetter, saveLetter, loading, saving }
 }

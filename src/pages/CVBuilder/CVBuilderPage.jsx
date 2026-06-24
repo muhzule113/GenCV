@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import Navbar from '../../components/common/Navbar'
 import Stepper from '../../components/common/Stepper'
 import Button from '../../components/common/Button'
@@ -21,12 +21,40 @@ const steps = ['Data Diri', 'Ringkasan', 'Pengalaman', 'Pendidikan', 'Keahlian &
 
 export default function CVBuilderPage() {
   const navigate = useNavigate()
-  const { currentStep, setStep, cvData, updateData, setCvData, templateId, setTemplateId, title, setTitle } = useCVStore()
-  const { generateSummary, saveDraft } = useCV()
+  const { id: editId } = useParams()
+  const { currentStep, setStep, cvData, updateData, setCvData, templateId, setTemplateId, title, setTitle, reset } = useCVStore()
+  const { generateSummary, saveDraft, loadCV } = useCV()
   const [generating, setGenerating] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [templateModal, setTemplateModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [loadingCV, setLoadingCV] = useState(!!editId)
+  const [loadError, setLoadError] = useState(null)
+
+  useEffect(() => {
+    if (!editId) {
+      reset()
+      setLoadingCV(false)
+      setLoadError(null)
+      return
+    }
+    let cancelled = false
+    setLoadingCV(true)
+    setLoadError(null)
+    ;(async () => {
+      const cv = await loadCV(editId)
+      if (cancelled) return
+      if (!cv) {
+        setLoadError('CV tidak ditemukan atau gagal dimuat')
+        setLoadingCV(false)
+        return
+      }
+      if (cv.template_id) setTemplateId(cv.template_id)
+      setStep(0)
+      setLoadingCV(false)
+    })()
+    return () => { cancelled = true }
+  }, [editId, loadCV, reset, setTemplateId, setStep])
 
   const handleGenerate = async (params) => {
     setGenerating(true)
@@ -37,8 +65,11 @@ export default function CVBuilderPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    await saveDraft()
+    const result = await saveDraft(editId)
     setSaving(false)
+    if (result?.id && !editId) {
+      navigate(`/cv/${result.id}/edit`, { replace: true })
+    }
   }
 
   const handleNext = () => {
@@ -79,34 +110,44 @@ export default function CVBuilderPage() {
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 bg-white dark:bg-slate-800 border border-border dark:border-border-dark rounded-card p-6">
-            {stepComponents[currentStep]}
-
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-border dark:border-border-dark">
-              <Button variant="ghost" onClick={handlePrev}>
-                {currentStep === 0 ? 'Kembali ke Dashboard' : 'Sebelumnya'}
-              </Button>
-              <div className="flex gap-3">
-                {currentStep === steps.length - 1 ? (
-                  <>
-                    <Button variant="secondary" loading={saving} onClick={handleSave}>Simpan Draft</Button>
-                    <PDFDownloadLink
-                      document={templateId === 'ats-modern-v1' ? <ATSModernTemplate data={cvData} /> : <ATSCleanTemplate data={cvData} />}
-                      fileName={`${cvData.personal?.name?.replace(/\s+/g, '-') || 'CV'}-CV.pdf`}
-                    >
-                      {({ loading: pdfLoading }) => (
-                        <Button loading={pdfLoading}>{pdfLoading ? 'Menyiapkan...' : 'Download PDF'}</Button>
-                      )}
-                    </PDFDownloadLink>
-                  </>
-                ) : (
-                  <Button onClick={handleNext}>{currentStep === steps.length - 2 ? 'Review & Final' : 'Selanjutnya'}</Button>
-                )}
+            {loadingCV ? (
+              <div className="py-16 text-center text-text-muted dark:text-text-muted-dark">
+                Memuat CV...
               </div>
-            </div>
+            ) : (
+              <>
+                {stepComponents[currentStep]}
+
+                <div className="flex items-center justify-between mt-8 pt-6 border-t border-border dark:border-border-dark">
+                  <Button variant="ghost" onClick={handlePrev}>
+                    {currentStep === 0 ? 'Kembali ke Dashboard' : 'Sebelumnya'}
+                  </Button>
+                  <div className="flex gap-3">
+                    {currentStep === steps.length - 1 ? (
+                      <>
+                        <Button variant="secondary" loading={saving} onClick={handleSave}>
+                          {editId ? 'Simpan Perubahan' : 'Simpan Draft'}
+                        </Button>
+                        <PDFDownloadLink
+                          document={templateId === 'ats-modern-v1' ? <ATSModernTemplate data={cvData} /> : <ATSCleanTemplate data={cvData} />}
+                          fileName={`${cvData.personal?.name?.replace(/\s+/g, '-') || 'CV'}-CV.pdf`}
+                        >
+                          {({ loading: pdfLoading }) => (
+                            <Button loading={pdfLoading}>{pdfLoading ? 'Menyiapkan...' : 'Download PDF'}</Button>
+                          )}
+                        </PDFDownloadLink>
+                      </>
+                    ) : (
+                      <Button onClick={handleNext}>{currentStep === steps.length - 2 ? 'Review & Final' : 'Selanjutnya'}</Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="lg:w-[45%]">
-            <div className="hidden lg:block">
+          <div className="lg:w-[45%] xl:w-[42%]">
+            <div className="hidden lg:block lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)]">
               <p className="text-sm text-text-muted dark:text-text-muted-dark mb-3 font-medium">Preview CV</p>
               <CVPreview data={cvData} templateId={templateId} />
             </div>

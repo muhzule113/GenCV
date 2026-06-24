@@ -2,37 +2,43 @@ import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Helvetica',
-    fontSize: 11,
-    paddingTop: 50,
-    paddingBottom: 50,
-    paddingLeft: 60,
-    paddingRight: 60,
+    fontFamily: 'Times-Roman',
+    fontSize: 12,
+    paddingTop: 70,
+    paddingBottom: 70,
+    paddingLeft: 85,
+    paddingRight: 70,
     color: '#000',
     lineHeight: 1.5,
   },
   cityDate: {
     textAlign: 'right',
-    marginBottom: 20,
-    fontSize: 11,
+    marginBottom: 18,
+    fontSize: 12,
   },
   recipient: {
-    marginBottom: 4,
-    fontSize: 11,
+    marginBottom: 2,
+    fontSize: 12,
   },
   greeting: {
-    marginTop: 12,
-    marginBottom: 12,
-    fontSize: 11,
+    marginTop: 10,
+    marginBottom: 10,
+    fontSize: 12,
+  },
+  intro: {
+    marginBottom: 6,
+    fontSize: 12,
   },
   dataRow: {
     flexDirection: 'row',
     marginBottom: 2,
-    fontSize: 11,
+    fontSize: 12,
   },
   dataLabel: {
-    width: 80,
-    fontWeight: 'normal',
+    width: 150,
+  },
+  dataSep: {
+    width: 8,
   },
   dataValue: {
     flex: 1,
@@ -42,46 +48,86 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     marginBottom: 10,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'justify',
   },
-  attachmentBlock: {
-    marginTop: 8,
-    marginBottom: 10,
+  positionBold: {
+    fontFamily: 'Times-Bold',
+    textTransform: 'uppercase',
+  },
+  attachmentIntro: {
+    marginBottom: 4,
+    fontSize: 12,
   },
   attachmentItem: {
     flexDirection: 'row',
     marginBottom: 2,
-    fontSize: 11,
-    paddingLeft: 20,
+    fontSize: 12,
+    paddingLeft: 24,
   },
-  bullet: {
-    width: 15,
+  attachmentNum: {
+    width: 22,
   },
   closing: {
     marginTop: 10,
     marginBottom: 10,
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'justify',
   },
-  signature: {
-    marginTop: 30,
-    fontSize: 11,
+  signatureBlock: {
+    marginTop: 18,
+    marginLeft: '55%',
+  },
+  signatureLine: {
+    fontSize: 12,
+    marginBottom: 36,
   },
   signatureName: {
-    marginTop: 40,
-    fontSize: 11,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontFamily: 'Times-Bold',
   },
 })
 
-export function CoverLetterTemplate({ data }) {
-  const defaultAttachments = ['Curriculum Vitae (CV)', 'Pas Foto 3x4', 'Fotokopi KTP', 'Fotokopi Ijazah', 'Fotokopi Transkrip Nilai']
-  const attachments = data.attachments?.length ? data.attachments : defaultAttachments
+const attachmentLabels = {
+  cv: 'Curriculum Vitae (CV)',
+  foto: 'Pas Foto 3x4',
+  ktp: 'Fotokopi KTP',
+  ijazah: 'Fotokopi Ijazah',
+  transkrip: 'Fotokopi Transkrip Nilai',
+  sertifikat: 'Sertifikat Pendukung',
+}
 
-  const contentParagraph = data.content
-    ? data.content
-    : `Dengan ini mengajukan lamaran sebagai ${data.position || '[POSISI]'} di ${data.companyName || '[PERUSAHAAN]'} yang Bapak/Ibu pimpin. Saya memiliki motivasi tinggi untuk bergabung dan memberikan kontribusi terbaik bagi perusahaan. Sebagai bahan pertimbangan, berikut saya lampirkan dokumen-dokumen yang diperlukan.`
+const defaultAttachmentKeys = ['cv', 'foto', 'ktp', 'ijazah', 'transkrip']
+
+function buildAttachmentList(data) {
+  const raw = data.attachments
+  if (Array.isArray(raw) && raw.length > 0) {
+    const looksLikeKeys = typeof raw[0] === 'string' && raw[0].length <= 16 && !raw[0].includes(' ')
+    if (looksLikeKeys) return raw.map((k) => attachmentLabels[k] || k)
+    return raw
+  }
+  return defaultAttachmentKeys.map((k) => attachmentLabels[k])
+}
+
+function formatBirthPlaceDate(p) {
+  if (!p) return ''
+  const place = p.birthPlace || ''
+  const date = p.birthDate || ''
+  if (place && date) return `${place}, ${date}`
+  return place || date
+}
+
+function splitParagraphs(content) {
+  if (!content) return []
+  return content.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean)
+}
+
+export function CoverLetterTemplate({ data }) {
+  const p = data.personal || {}
+  const ttl = formatBirthPlaceDate(p)
+  const attachments = buildAttachmentList(data)
+  const position = (data.position || '').toUpperCase()
+  const paragraphs = splitParagraphs(data.content)
 
   return (
     <Document>
@@ -89,81 +135,94 @@ export function CoverLetterTemplate({ data }) {
         <Text style={styles.cityDate}>{data.city || 'Barru'}, {data.date || '12 Juni 2026'}</Text>
 
         <Text style={styles.recipient}>Kepada Yth.</Text>
-        {data.recipientTitle && <Text style={styles.recipient}>{data.recipientTitle}</Text>}
-        <Text style={styles.recipient}>di {data.companyName || '[PERUSAHAAN]'}</Text>
-        <Text style={styles.recipient}>Di Tempat</Text>
+        <Text style={styles.recipient}>{data.recipientTitle || 'HRD'}</Text>
+        <Text style={styles.recipient}>Di {data.company || '[NAMA PERUSAHAAN]'}</Text>
 
         <Text style={styles.greeting}>Dengan hormat,</Text>
 
+        <Text style={styles.intro}>Saya yang bertanda tangan di bawah ini :</Text>
+
         <View style={styles.dataBlock}>
-          {data.personal?.name && (
+          {p.name && (
             <View style={styles.dataRow}>
               <Text style={styles.dataLabel}>Nama</Text>
-              <Text style={styles.dataValue}>: {data.personal.name}</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{p.name}</Text>
             </View>
           )}
-          {(data.personal?.birthPlace || data.personal?.birthDate) && (
+          {ttl && (
             <View style={styles.dataRow}>
               <Text style={styles.dataLabel}>Tempat, Tgl Lahir</Text>
-              <Text style={styles.dataValue}>: {data.personal.birthPlace || ''}{data.personal.birthPlace && data.personal.birthDate ? ', ' : ''}{data.personal.birthDate || ''}</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{ttl}</Text>
             </View>
           )}
-          {data.personal?.gender && (
+          {p.gender && (
             <View style={styles.dataRow}>
               <Text style={styles.dataLabel}>Jenis Kelamin</Text>
-              <Text style={styles.dataValue}>: {data.personal.gender}</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{p.gender}</Text>
             </View>
           )}
-          {data.personal?.lastEducation && (
+          {p.lastEducation && (
             <View style={styles.dataRow}>
               <Text style={styles.dataLabel}>Pendidikan</Text>
-              <Text style={styles.dataValue}>: {data.personal.lastEducation}</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{p.lastEducation}</Text>
             </View>
           )}
-          {data.personal?.address && (
+          {p.address && (
             <View style={styles.dataRow}>
               <Text style={styles.dataLabel}>Alamat</Text>
-              <Text style={styles.dataValue}>: {data.personal.address}</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{p.address}</Text>
             </View>
           )}
-          {data.personal?.phone && (
+          {p.phone && (
             <View style={styles.dataRow}>
-              <Text style={styles.dataLabel}>No. HP</Text>
-              <Text style={styles.dataValue}>: {data.personal.phone}</Text>
+              <Text style={styles.dataLabel}>Nomor HP</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{p.phone}</Text>
             </View>
           )}
-          {data.personal?.email && (
+          {p.email && (
             <View style={styles.dataRow}>
-              <Text style={styles.dataLabel}>Email</Text>
-              <Text style={styles.dataValue}>: {data.personal.email}</Text>
+              <Text style={styles.dataLabel}>E-mail</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{p.email}</Text>
             </View>
           )}
-          {data.personal?.portfolio && (
+          {p.portfolio && (
             <View style={styles.dataRow}>
               <Text style={styles.dataLabel}>Portofolio</Text>
-              <Text style={styles.dataValue}>: {data.personal.portfolio}</Text>
+              <Text style={styles.dataSep}>:</Text>
+              <Text style={styles.dataValue}>{p.portfolio}</Text>
             </View>
           )}
         </View>
 
-        <Text style={styles.bodyText}>{contentParagraph}</Text>
+        <Text style={styles.bodyText}>
+          Dengan ini mengajukan lamaran sebagai <Text style={styles.positionBold}>{position || '[POSISI]'}</Text>, bersama
+          ini saya lampirkan dokumen persyaratan sebagai berikut:
+        </Text>
 
-        <View style={styles.attachmentBlock}>
-          <Text style={{ marginBottom: 4, fontSize: 11 }}>Adapun lampiran yang saya sertakan sebagai berikut:</Text>
-          {attachments.map((item, i) => (
+        <View>
+          {attachments.map((label, i) => (
             <View key={i} style={styles.attachmentItem}>
-              <Text style={styles.bullet}>-</Text>
-              <Text>{item}</Text>
+              <Text style={styles.attachmentNum}>{i + 1}.</Text>
+              <Text>{label}</Text>
             </View>
           ))}
         </View>
 
-        <Text style={styles.closing}>
-          Demikian surat lamaran ini saya buat dengan sebenarnya. Besar harapan saya dapat diterima di perusahaan yang Bapak/Ibu pimpin. Atas perhatian dan kesempatan yang diberikan, saya ucapkan terima kasih.
-        </Text>
+        {paragraphs.map((para, i) => (
+          <Text key={i} style={styles.closing}>{para}</Text>
+        ))}
 
-        <Text style={styles.signature}>Hormat saya,</Text>
-        <Text style={styles.signatureName}>( {data.personal?.name || '[Nama Lengkap]'} )</Text>
+        <View style={styles.signatureBlock}>
+          <Text style={styles.signatureLine}>Hormat saya,</Text>
+          <Text style={styles.signatureName}>( {p.name || '[Nama Lengkap]'} )</Text>
+        </View>
       </Page>
     </Document>
   )

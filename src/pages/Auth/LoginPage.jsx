@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
 import useAuth from '../../hooks/useAuth'
+import useToastStore from '../../store/toastStore'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -11,6 +12,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
   const { signIn } = useAuth()
+  const addToast = useToastStore((s) => s.addToast)
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') {
+      addToast('Sesi Anda telah berakhir. Silakan masuk kembali.', 'warning')
+    }
+  }, [searchParams, addToast])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

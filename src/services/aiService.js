@@ -43,3 +43,15 @@ export async function generateProfileSummary({ experiences, skills, targetPositi
     throw new Error('AI service tidak tersedia. Isi manual.')
   }
 }
+
+export async function recommendSkills({ position, existingSkills = [] }) {
+  try {
+    const response = await api.post('/api/cv/recommend-skills', {
+      position,
+      existingSkills,
+    })
+    return response.data.data.skills
+  } catch (error) {
+    throw new Error('Gagal memuat rekomendasi skill dari AI.')
+  }
+}
