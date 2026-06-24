@@ -15,7 +15,7 @@ export function sanitizeAIOutput(text) {
     .trim();
 }
 
-export async function generateCoverLetter({ position, company, companyField, infoSource, recipientTitle, highlights, cvData }) {
+export async function generateCoverLetter({ position, company, companyField, infoSource, recipientTitle, highlights, cvData, personal, relevantExperience }) {
   const response = await deepseek.chat.completions.create({
     model: 'deepseek-chat',
     messages: [
@@ -23,25 +23,30 @@ export async function generateCoverLetter({ position, company, companyField, inf
         role: 'system',
         content: `Kamu adalah asisten profesional pembuat surat lamaran kerja formal dalam Bahasa Indonesia.
 
-Data yang tersedia:
-- Nama pelamar: ${cvData?.personal?.name || 'tidak diketahui'}
+Data pelamar:
+- Nama: ${personal?.name || cvData?.personal?.name || 'tidak diketahui'}
+- Tempat, tgl lahir: ${personal?.birthPlace || ''}${personal?.birthDate ? `, ${personal.birthDate}` : ''}
+- Pendidikan terakhir: ${personal?.lastEducation || (cvData?.educations?.[0]?.degree ? cvData.educations[0].degree + ' ' + (cvData.educations[0].field || '') : '')}
+- Pengalaman relevan: ${relevantExperience || cvData?.experiences?.[0]?.position || ''} ${cvData?.experiences?.[0]?.company ? 'di ' + cvData.experiences[0].company : ''}
+- Ringkasan profil: ${cvData?.summary || 'tidak ada'}
+
+Data lamaran:
 - Posisi yang dilamar: ${position}
 - Nama perusahaan: ${company}
 - Bidang perusahaan: ${companyField || 'tidak disebutkan'}
 - Sumber info lowongan: ${infoSource}
 - Poin yang ingin ditonjolkan: ${highlights?.join(', ')}
-- Ringkasan profil: ${cvData?.summary || 'tidak ada'}
-- Pengalaman terakhir: ${cvData?.experiences?.[0]?.position || ''} di ${cvData?.experiences?.[0]?.company || ''}
 
 INSTRUKSI WAJIB:
-1. Tulis HANYA isi paragraf surat (3 paragraf). Jangan tulis salam, data diri, atau penutup.
-2. Gunakan data nyata di atas — DILARANG menulis placeholder seperti [Nama] atau [sebutkan].
-3. DILARANG menggunakan tanda bintang (**) atau simbol markdown apapun.
-4. Paragraf 1: perkenalan + posisi yang dilamar + sumber info lowongan (gunakan nilai nyata dari data).
-5. Paragraf 2: ceritakan pengalaman dan keahlian relevan dari poin highlights (gunakan data nyata).
-6. Paragraf 3: motivasi melamar ke perusahaan ini (sebutkan nama perusahaan dan bidang industrinya) + komitmen.
-7. Tone formal, sopan, percaya diri. Tidak ada kalimat klise seperti "saya sangat antusias".
-8. Tidak ada kalimat yang meminta konfirmasi atau bertanya balik.`,
+1. Tulis HANYA 3 paragraf isi surat (naratif). Jangan tulis salam pembuka, data diri, daftar lampiran, atau tanda tangan.
+2. Paragraf 1: perkenalan singkat + posisi yang dilamar + sumber info lowongan (gunakan nilai nyata).
+3. Paragraf 2: ceritakan pengalaman dan keahlian relevan (gunakan data nyata pelamar, termasuk pengalaman dan poin highlights).
+4. Paragraf 3: motivasi melamar ke perusahaan ini (sebutkan nama perusahaan dan bidangnya) + komitmen kontribusi.
+5. Gunakan data nyata di atas — DILARANG menulis placeholder seperti [Nama] atau [sebutkan].
+6. DILARANG menggunakan tanda bintang (**), markdown, atau simbol formatting apapun.
+7. Pisahkan setiap paragraf dengan satu baris kosong.
+8. Tone formal, sopan, percaya diri. Tidak ada kalimat klise seperti "saya sangat antusias".
+9. Tidak ada kalimat yang meminta konfirmasi, pertanyaan, atau sapaan pembuka/penutup.`,
       },
     ],
     max_tokens: 700,
@@ -49,6 +54,33 @@ INSTRUKSI WAJIB:
   });
 
   return sanitizeAIOutput(response.choices[0].message.content);
+}
+
+export async function recommendSkills({ position, existingSkills = [] }) {
+  const response = await deepseek.chat.completions.create({
+    model: 'deepseek-chat',
+    messages: [
+      {
+        role: 'system',
+        content: `Kamu adalah konsultan karier dan tech recruiter profesional.
+Berdasarkan posisi pekerjaan "${position}", rekomendasikan 8-12 keahlian teknis (technical skills) yang paling relevan dan banyak dicari di pasar kerja untuk posisi tersebut.
+
+${existingSkills.length > 0 ? `Hindari duplikasi dengan keahlian yang sudah dimiliki kandidat: ${existingSkills.join(', ')}.` : ''}
+
+Keahlian bisa berupa: bahasa pemrograman, framework, library, tools, database, platform, metodologi (Agile, Scrum, CI/CD, dll), soft skill teknis (problem solving, dll), atau sertifikat.
+
+FORMAT OUTPUT: kembalikan HANYA array JSON valid berisi string keahlian, tanpa penjelasan, tanpa markdown, tanpa tanda bintang.
+Contoh format:
+["React.js", "Node.js", "PostgreSQL", "Docker", "AWS", "Git", "REST API", "Agile"]
+
+Setiap item: singkat (1-3 kata), spesifik, nama teknologi/tool yang recognised industri. Gunakan bahasa Inggris untuk nama teknologi (React, bukan React.js dalam beberapa kasus), dan Bahasa Indonesia untuk soft skill metodologi.`,
+      },
+    ],
+    max_tokens: 300,
+    temperature: 0.5,
+  });
+
+  return response.choices[0].message.content;
 }
 
 export async function recommendHighlights({ position, cvData }) {

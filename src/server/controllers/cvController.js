@@ -145,3 +145,46 @@ export async function generateSummary(req, res) {
     res.status(500).json({ error: 'AI generation failed', details: err.message });
   }
 }
+
+export async function recommendSkills(req, res) {
+  const { position, existingSkills } = req.body;
+
+  if (!position) {
+    return res.status(400).json({ error: 'Position is required' });
+  }
+
+  try {
+    const { recommendSkills: recommendFn } = await import('../services/aiService.js');
+    const raw = await recommendFn({ position, existingSkills: existingSkills || [] });
+
+    let skills = [];
+    try {
+      skills = JSON.parse(raw);
+      if (!Array.isArray(skills)) throw new Error('Not an array');
+    } catch {
+      const fallbackMap = {
+        'software engineer': ['JavaScript', 'TypeScript', 'React', 'Node.js', 'PostgreSQL', 'Git', 'REST API', 'Docker', 'AWS', 'Agile'],
+        'frontend': ['JavaScript', 'TypeScript', 'React', 'Vue.js', 'Tailwind CSS', 'HTML5', 'CSS3', 'Git', 'Responsive Design', 'Figma'],
+        'backend': ['Node.js', 'Python', 'PostgreSQL', 'REST API', 'Docker', 'Redis', 'AWS', 'Git', 'Microservices', 'CI/CD'],
+        'data analyst': ['SQL', 'Python', 'Excel', 'Tableau', 'Power BI', 'Statistics', 'Data Visualization', 'Pandas', 'ETL', 'Communication'],
+        'data scientist': ['Python', 'Machine Learning', 'TensorFlow', 'PyTorch', 'SQL', 'Statistics', 'Pandas', 'NumPy', 'Deep Learning', 'NLP'],
+        'devops': ['Docker', 'Kubernetes', 'AWS', 'CI/CD', 'Terraform', 'Linux', 'Git', 'Jenkins', 'Monitoring', 'Ansible'],
+        'admin': ['Microsoft Office', 'Administrasi Perkantoran', 'Komunikasi', 'Kearsipan', 'Disiplin', 'Teliti'],
+        'staff': ['Microsoft Office', 'Kerja Tim', 'Komunikasi', 'Administrasi', 'Disiplin', 'Tanggung Jawab'],
+        'marketing': ['Digital Marketing', 'SEO', 'Google Analytics', 'Content Marketing', 'Social Media', 'Copywriting', 'Meta Ads', 'Google Ads', 'CRM', 'Communication'],
+        'designer': ['Figma', 'Adobe Photoshop', 'Adobe Illustrator', 'UI/UX', 'Typography', 'Color Theory', 'Prototyping', 'Branding', 'Canva', 'Wireframing'],
+        'product manager': ['Product Strategy', 'Agile', 'Scrum', 'Roadmapping', 'Stakeholder Management', 'Data Analysis', 'User Research', 'Jira', 'Communication', 'Leadership'],
+      };
+      const key = Object.keys(fallbackMap).find(k => position.toLowerCase().includes(k));
+      skills = key ? fallbackMap[key] : ['Komunikasi', 'Kerja Tim', 'Problem Solving', 'Microsoft Office', 'Administrasi', 'Tanggung Jawab', 'Disiplin', 'Adaptif'];
+    }
+
+    const filtered = existingSkills?.length
+      ? skills.filter((s) => !existingSkills.some((e) => e.toLowerCase() === s.toLowerCase()))
+      : skills;
+
+    res.json({ success: true, data: { skills: filtered } });
+  } catch (err) {
+    res.status(500).json({ error: 'AI recommendation failed', details: err.message });
+  }
+}

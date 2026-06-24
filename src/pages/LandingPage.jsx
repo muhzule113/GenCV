@@ -1,10 +1,24 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Button from '../components/common/Button'
 import Navbar from '../components/common/Navbar'
 import Footer from '../components/common/Footer'
+import useAuthStore from '../store/authStore'
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  useEffect(() => {
+    const target = location.state?.scrollTo
+    if (!target) return
+    const el = document.getElementById(target)
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+    window.history.replaceState({}, '')
+  }, [location.state])
 
   return (
     <div className="min-h-screen bg-white dark:bg-surface-dark">
@@ -20,8 +34,8 @@ export default function LandingPage() {
           Cukup isi data diri, dan kami yang urus sisanya.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button size="lg" onClick={() => navigate('/register')}>Mulai Gratis</Button>
-          <Button variant="secondary" size="lg" onClick={() => navigate('/login')}>Lihat Demo</Button>
+          {!isAuthenticated && <Button size="lg" onClick={() => navigate('/register')}>Mulai Gratis</Button>}
+          <Button variant="secondary" size="lg" onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>{isAuthenticated ? 'Ke Dashboard' : 'Lihat Demo'}</Button>
         </div>
 
         <div className="mt-16 max-w-4xl mx-auto bg-surface-2 dark:bg-slate-800 border border-border dark:border-border-dark rounded-card p-6 shadow-card">
@@ -76,7 +90,7 @@ export default function LandingPage() {
         <div className="bg-primary rounded-2xl p-12 md:p-16 text-center text-white">
           <h2 className="text-h2 text-white mb-4">Siap Membuat CV Profesional?</h2>
           <p className="text-body text-white/80 mb-8 max-w-lg mx-auto">Lebih dari 1.000 pencari kerja sudah menggunakan GenCV. Gratis, tidak perlu kartu kredit.</p>
-          <Button variant="secondary" size="lg" onClick={() => navigate('/register')} className="bg-white !text-primary hover:bg-gray-100">Mulai Gratis</Button>
+          {!isAuthenticated && <Button variant="secondary" size="lg" onClick={() => navigate('/register')} className="bg-white !text-primary hover:bg-gray-100">Mulai Gratis</Button>}
         </div>
       </section>
 

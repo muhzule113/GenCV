@@ -5,7 +5,7 @@ import api from '../services/api'
 
 export default function useCV() {
   const addToast = useToastStore((s) => s.addToast)
-  const { cvData, setCvData, templateId, title, reset } = useCVStore()
+  const { cvData, setCvData, setTitle, templateId, title, reset } = useCVStore()
 
   const generateSummary = useCallback(async ({ targetPosition, tone, language } = {}) => {
     const { experiences, skills, personal } = cvData
@@ -28,19 +28,60 @@ export default function useCV() {
     }
   }, [cvData, setCvData, addToast])
 
-  const saveDraft = useCallback(async () => {
+  const saveDraft = useCallback(async (id) => {
     try {
-      await api.post('/api/cv', {
-        title,
-        template_id: templateId,
-        data: cvData,
-      })
-      addToast('Draft berhasil disimpan!', 'success')
+      if (id) {
+        await api.put(`/api/cv/${id}`, {
+          title,
+          template_id: templateId,
+          data: cvData,
+        })
+      } else {
+        await api.post('/api/cv', {
+          title,
+          template_id: templateId,
+          data: cvData,
+        })
+      }
+      addToast(id ? 'CV berhasil diperbarui!' : 'Draft berhasil disimpan!', 'success')
+      return { id }
     } catch (err) {
-      const message = err.response?.data?.error || 'Gagal menyimpan draft'
+      const message = err.response?.data?.error || 'Gagal menyimpan CV'
       addToast(message, 'error')
+      return null
     }
   }, [cvData, title, templateId, addToast])
 
-  return { generateSummary, saveDraft, reset }
+  const loadCV = useCallback(async (id) => {
+    try {
+      const response = await api.get(`/api/cv/${id}`)
+      const cv = response.data.data
+      const defaultShape = {
+        personal: { name: '', jobTitle: '', email: '', phone: '', city: '', linkedin: '', github: '', portfolio: '' },
+        summary: '',
+        experiences: [],
+        educations: [],
+        skills: { technical: [], soft: [] },
+        projects: [],
+        certifications: [],
+        languages: [],
+      }
+      const loaded = cv.data || {}
+      const merged = {
+        ...defaultShape,
+        ...loaded,
+        personal: { ...defaultShape.personal, ...(loaded.personal || {}) },
+        skills: { ...defaultShape.skills, ...(loaded.skills || {}) },
+      }
+      setCvData(merged)
+      setTitle(cv.title || 'CV Baru')
+      return cv
+    } catch (err) {
+      const message = err.response?.data?.error || 'Gagal memuat CV'
+      addToast(message, 'error')
+      return null
+    }
+  }, [setCvData, setTitle, addToast])
+
+  return { generateSummary, saveDraft, loadCV, reset }
 }

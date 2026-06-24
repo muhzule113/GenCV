@@ -8,6 +8,7 @@ import {
   deleteCV,
   duplicateCV,
   generateSummary,
+  recommendSkills,
 } from '../controllers/cvController.js';
 
 const router = Router();
@@ -17,6 +18,7 @@ router.use(requireAuth);
 router.get('/', listCVs);
 router.post('/', createCV);
 router.post('/generate-summary', generateSummary);
+router.post('/recommend-skills', recommendSkills);
 router.get('/:id', getCV);
 router.put('/:id', updateCV);
 router.delete('/:id', deleteCV);

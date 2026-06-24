@@ -97,8 +97,43 @@ export async function deleteLetter(req, res) {
   res.json({ success: true, message: 'Cover letter deleted' });
 }
 
+function formatIndonesianDate(value) {
+  if (!value) return '';
+  const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const day = parseInt(m[3], 10);
+    const monthIdx = parseInt(m[2], 10) - 1;
+    const year = m[1];
+    return `${day} ${months[monthIdx] || m[2]} ${year}`;
+  }
+  return value;
+}
+
+const defaultAttachmentLabels = {
+  cv: 'Curriculum Vitae (CV)',
+  foto: 'Pas Foto 3x4',
+  ktp: 'Fotokopi KTP',
+  ijazah: 'Fotokopi Ijazah',
+  transkrip: 'Fotokopi Transkrip Nilai',
+  sertifikat: 'Sertifikat Pendukung',
+};
+
+function buildAttachmentLabels(rawAttachments, customAttachment) {
+  const list = Array.isArray(rawAttachments) && rawAttachments.length > 0
+    ? rawAttachments
+    : ['cv', 'foto', 'ktp', 'ijazah', 'transkrip'];
+  const labels = list.map((k) => defaultAttachmentLabels[k] || k);
+  if (customAttachment && customAttachment.trim()) labels.push(customAttachment.trim());
+  return labels;
+}
+
 export async function generateLetter(req, res) {
-  const { cv_id, position, company, company_field, info_source, recipient_title, highlights } = req.body;
+  const {
+    cv_id, position, company, company_field, info_source, recipient_title, highlights,
+    personal = {}, attachments = [], custom_attachment = '', city = '', letter_date = '',
+    relevant_experience = '',
+  } = req.body;
 
   if (!position || !company) {
     return res.status(400).json({ error: 'Position and company are required' });
@@ -115,6 +150,21 @@ export async function generateLetter(req, res) {
     cvData = data?.data || null;
   }
 
+  const mergedPersonal = {
+    name: personal.name || cvData?.personal?.name || '',
+    email: personal.email || cvData?.personal?.email || '',
+    phone: personal.phone || cvData?.personal?.phone || '',
+    address: personal.address || '',
+    birthPlace: personal.birthPlace || '',
+    birthDate: personal.birthDate || '',
+    gender: personal.gender || '',
+    lastEducation: personal.lastEducation || (cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : ''),
+    portfolio: personal.portfolio || cvData?.personal?.portfolio || '',
+  };
+
+  const attachmentLabels = buildAttachmentLabels(attachments, custom_attachment);
+  const formattedDate = formatIndonesianDate(letter_date);
+
   try {
     const { generateCoverLetter } = await import('../services/aiService.js');
     const content = await generateCoverLetter({
@@ -125,9 +175,27 @@ export async function generateLetter(req, res) {
       recipientTitle: recipient_title,
       highlights: highlights || [],
       cvData,
+      personal: mergedPersonal,
+      relevantExperience: relevant_experience,
     });
 
-    res.json({ success: true, data: { content } });
+    res.json({
+      success: true,
+      data: {
+        content,
+        cv_id: cv_id || '',
+        position,
+        company,
+        companyField: company_field || '',
+        infoSource: info_source || '',
+        recipientTitle: recipient_title || 'HRD',
+        personal: mergedPersonal,
+        attachments: attachmentLabels,
+        city: city || '',
+        date: formattedDate,
+        highlights: highlights || [],
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: 'AI generation failed', details: err.message });
   }

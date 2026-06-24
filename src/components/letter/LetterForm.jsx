@@ -12,8 +12,146 @@ const infoSourceOptions = [
   'Lainnya',
 ]
 
-export default function LetterForm({ form, setForm, onGenerate, loading, hasContent }) {
+const attachmentOptions = [
+  { key: 'cv', label: 'Curriculum Vitae (CV)' },
+  { key: 'foto', label: 'Pas Foto 3x4' },
+  { key: 'ktp', label: 'Fotokopi KTP' },
+  { key: 'ijazah', label: 'Fotokopi Ijazah' },
+  { key: 'transkrip', label: 'Fotokopi Transkrip Nilai' },
+  { key: 'sertifikat', label: 'Sertifikat Pendukung' },
+]
+
+const defaultAttachments = ['cv', 'foto', 'ktp', 'ijazah', 'transkrip']
+
+const SECTIONS = [
+  { id: 'A', title: 'Data Pelamar', subtitle: 'Identitas & kontak', icon: 'user' },
+  { id: 'B', title: 'Data Lamaran', subtitle: 'Perusahaan & posisi', icon: 'briefcase' },
+  { id: 'C', title: 'Lampiran', subtitle: 'Dokumen pendukung', icon: 'paperclip' },
+  { id: 'D', title: 'Lokasi & Tanggal', subtitle: 'Tempat & waktu surat', icon: 'calendar' },
+]
+
+function SectionIcon({ name, className = 'w-4 h-4' }) {
+  const icons = {
+    user: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    ),
+    briefcase: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0" />
+    ),
+    paperclip: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+    ),
+    calendar: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+    ),
+    sparkle: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+    ),
+    chevron: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    ),
+  }
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {icons[name]}
+    </svg>
+  )
+}
+
+function Section({ id, title, subtitle, icon, children, defaultOpen = true, completed = false }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <section className="group rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-2-dark shadow-card overflow-hidden transition-all duration-300 hover:shadow-md">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-surface-2 dark:hover:bg-slate-800/50 transition-colors"
+      >
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center ring-1 ring-primary/20">
+          {completed ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          ) : (
+            <SectionIcon name={icon} />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold tracking-wider text-primary uppercase">Blok {id}</span>
+            {completed && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-success/10 text-success uppercase tracking-wider">Lengkap</span>}
+          </div>
+          <h4 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark leading-tight">{title}</h4>
+          <p className="text-xs text-text-muted dark:text-text-muted-dark mt-0.5">{subtitle}</p>
+        </div>
+        <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-text-muted dark:text-text-muted-dark transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
+          <SectionIcon name="chevron" className="w-3.5 h-3.5" />
+        </div>
+      </button>
+      <div className={`grid transition-all duration-300 ease-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className="overflow-hidden">
+          <div className="px-4 pb-4 pt-1 space-y-4 border-t border-border/60 dark:border-border-dark/60">
+            {children}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Select({ label, required, value, onChange, children, hint }) {
+  return (
+    <div className="w-full">
+      {label && (
+        <label className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1.5">
+          {label} {required && <span className="text-danger">*</span>}
+        </label>
+      )}
+      <div className="relative">
+        <select
+          value={value}
+          onChange={onChange}
+          required={required}
+          className="w-full appearance-none px-4 py-2.5 pr-10 bg-white dark:bg-slate-800 border border-border dark:border-border-dark rounded-xl text-body text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary hover:border-primary/50 transition-all"
+        >
+          {children}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-text-muted dark:text-text-muted-dark">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </div>
+      </div>
+      {hint && <p className="mt-1.5 text-xs text-text-muted dark:text-text-muted-dark">{hint}</p>}
+    </div>
+  )
+}
+
+function ToggleChip({ active, onClick, children, icon }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
+        active
+          ? 'bg-primary text-white border-primary shadow-sm'
+          : 'bg-white dark:bg-slate-800 text-text-primary dark:text-text-primary-dark border-border dark:border-border-dark hover:border-primary/50 hover:bg-primary/5'
+      }`}
+    >
+      {icon && <span className={active ? 'text-white' : 'text-text-muted dark:text-text-muted-dark'}>{icon}</span>}
+      <span>{children}</span>
+      {active && (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, hasContent }) {
   const [cvList, setCvList] = useState([])
+  const [isLoadingCV, setIsLoadingCV] = useState(false)
   const [infoSourceOther, setInfoSourceOther] = useState('')
   const [isLoadingHighlights, setIsLoadingHighlights] = useState(false)
   const [recommendedHighlights, setRecommendedHighlights] = useState([])
@@ -21,6 +159,7 @@ export default function LetterForm({ form, setForm, onGenerate, loading, hasCont
   const [customHighlight, setCustomHighlight] = useState('')
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
+  const updatePersonal = (field) => (e) => setForm({ ...form, personal: { ...form.personal, [field]: e.target.value } })
 
   useEffect(() => {
     api.get('/api/cv').then((res) => {
@@ -33,6 +172,42 @@ export default function LetterForm({ form, setForm, onGenerate, loading, hasCont
     setSelectedHighlights([])
     setCustomHighlight('')
   }, [form.position])
+
+  useEffect(() => {
+    if (form.infoSource !== 'Lainnya') setInfoSourceOther('')
+  }, [form.infoSource])
+
+  const handleLoadCV = async (cvId) => {
+    setForm({ ...form, cv_id: cvId })
+    if (!cvId) return
+    setIsLoadingCV(true)
+    try {
+      const res = await api.get(`/api/cv/${cvId}`)
+      if (res.data?.success && res.data.data?.data) {
+        const d = res.data.data.data
+        const p = d.personal || {}
+        setForm((prev) => ({
+          ...prev,
+          cv_id: cvId,
+          personal: {
+            name: prev.personal.name || p.name || '',
+            email: prev.personal.email || p.email || '',
+            phone: prev.personal.phone || p.phone || '',
+            address: prev.personal.address || '',
+            birthPlace: prev.personal.birthPlace || '',
+            birthDate: prev.personal.birthDate || '',
+            gender: prev.personal.gender || '',
+            lastEducation: prev.personal.lastEducation || (d.educations?.[0]?.degree ? `${d.educations[0].degree} ${d.educations[0].field || ''}`.trim() : ''),
+            portfolio: prev.personal.portfolio || p.portfolio || '',
+          },
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to load CV', err)
+    } finally {
+      setIsLoadingCV(false)
+    }
+  }
 
   const toggleHighlight = (item) => {
     setSelectedHighlights((prev) =>
@@ -49,6 +224,7 @@ export default function LetterForm({ form, setForm, onGenerate, loading, hasCont
     if (JSON.stringify(finalHighlights) !== JSON.stringify(form.highlights)) {
       setForm({ ...form, highlights: finalHighlights })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHighlights, customHighlight])
 
   const handleLoadRecommendations = async () => {
@@ -75,151 +251,367 @@ export default function LetterForm({ form, setForm, onGenerate, loading, hasCont
   const showRecommendations = recommendedHighlights.length > 0
   const finalHighlights = getFinalHighlights()
 
+  const toggleAttachment = (key) => {
+    const current = form.attachments?.length ? form.attachments : defaultAttachments
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key]
+    setForm({ ...form, attachments: next })
+  }
+
+  const customAttachment = form.customAttachment || ''
+  const currentAttachments = form.attachments?.length ? form.attachments : defaultAttachments
+  const attachmentsList = currentAttachments.map(
+    (key) => attachmentOptions.find((o) => o.key === key)?.label || key
+  )
+  if (customAttachment.trim()) attachmentsList.push(customAttachment.trim())
+
+  // Section completion checks
+  const isBlockAComplete = form.personal.name && form.personal.birthPlace && form.personal.gender &&
+    form.personal.lastEducation && form.personal.address && form.personal.phone && form.personal.email
+  const isBlockBComplete = form.company && form.recipientTitle && form.position
+  const isBlockCComplete = currentAttachments.length > 0
+  const isBlockDComplete = form.city && form.letterDate
+
   return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-h3 text-text-primary dark:text-text-primary-dark mb-1">Data Surat Lamaran</h3>
-        <p className="text-sm text-text-muted dark:text-text-muted-dark">Isi informasi posisi dan perusahaan yang dituju.</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1.5">Pilih CV Referensi (opsional)</label>
-        <select
-          value={form.cv_id}
-          onChange={(e) => setForm({ ...form, cv_id: e.target.value })}
-          className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-border dark:border-border-dark rounded-lg text-body text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-        >
-          <option value="">Pilih CV (opsional) — untuk isi data diri otomatis</option>
-          {cvList.map((cv) => (
-            <option key={cv.id} value={cv.id}>{cv.title}</option>
-          ))}
-        </select>
-      </div>
-
-      <Input label="Posisi yang Dilamar" placeholder="contoh: Staff Admin Pembangkit, Backend Developer" value={form.position} onChange={update('position')} required />
-
-      <Input label="Nama Perusahaan" placeholder="contoh: PT Paguntaka Cahaya Nusantara" value={form.company} onChange={update('company')} required />
-
-      <div className="relative">
-        <Input
-          label="Bidang / Industri Perusahaan (opsional)"
-          placeholder="contoh: energi, teknologi, kesehatan, manufaktur"
-          value={form.companyField}
-          onChange={update('companyField')}
-        />
-        <span className="absolute right-2 top-9 text-text-muted dark:text-text-muted-dark cursor-help group">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <span className="absolute bottom-full right-0 mb-1 hidden group-hover:block bg-slate-800 text-white text-xs rounded px-2 py-1 w-48 text-center">Digunakan AI untuk personalisasi kalimat tentang perusahaan</span>
-        </span>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1.5">Sumber Informasi Lowongan</label>
-        <select
-          value={form.infoSource}
-          onChange={(e) => {
-            setForm({ ...form, infoSource: e.target.value })
-            if (e.target.value !== 'Lainnya') setInfoSourceOther('')
-          }}
-          className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-border dark:border-border-dark rounded-lg text-body text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-        >
-          <option value="">Pilih sumber informasi lowongan...</option>
-          {infoSourceOptions.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
-        {form.infoSource === 'Lainnya' && (
-          <Input
-            placeholder="Sebutkan sumber..."
-            value={infoSourceOther}
-            onChange={(e) => {
-              setInfoSourceOther(e.target.value)
-              setForm({ ...form, infoSource: e.target.value })
-            }}
-            className="mt-2"
-          />
-        )}
-      </div>
-
-      <Input
-        label="Jabatan Penerima Surat"
-        placeholder="HRD / Manajer Rekrutmen / Direktur"
-        value={form.recipientTitle}
-        onChange={update('recipientTitle')}
-      />
-
-      <div className="grid md:grid-cols-2 gap-5">
-        <Input label="Kota" placeholder="Jakarta" value={form.city} onChange={update('city')} />
-        <Input label="Tanggal Surat" type="date" value={form.letterDate} onChange={update('letterDate')} />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1.5">Poin yang Ingin Ditonjolkan</label>
-
-        {showRecommendBtn && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLoadRecommendations}
-            loading={isLoadingHighlights}
-            className="mb-3"
-          >
-            {isLoadingHighlights ? 'AI sedang menganalisis kecocokan dengan posisi...' : 'Muat Rekomendasi AI'}
-          </Button>
-        )}
-
-        {isLoadingHighlights && (
-          <div className="flex items-center gap-2 text-sm text-text-muted dark:text-text-muted-dark mb-3">
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            AI sedang menganalisis kecocokan dengan posisi...
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent border border-primary/10 p-5">
+        <div className="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
+        <div className="absolute -right-4 -bottom-8 w-24 h-24 bg-primary/10 rounded-full blur-xl" />
+        <div className="relative">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold mb-2">
+            <SectionIcon name="sparkle" className="w-3 h-3" />
+            <span>AI Cover Letter</span>
           </div>
-        )}
+          <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">Data Surat Lamaran</h3>
+          <p className="text-sm text-text-muted dark:text-text-muted-dark mt-1">Lengkapi formulir untuk membuat surat lamaran profesional dengan bantuan AI.</p>
+        </div>
+      </div>
 
-        {showRecommendations && (
-          <div className="space-y-2 mb-3">
-            {recommendedHighlights.map((item) => (
-              <label key={item} className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedHighlights.includes(item)}
-                  onChange={() => toggleHighlight(item)}
-                  className="mt-1 accent-primary"
-                />
-                <span className="text-sm text-text-primary dark:text-text-primary-dark">{item}</span>
-              </label>
+      {/* Section A: Data Pelamar */}
+      <Section
+        id="A"
+        title="Data Pelamar"
+        subtitle="Identitas pribadi & kontak"
+        icon="user"
+        completed={isBlockAComplete}
+        defaultOpen
+      >
+        <div>
+          <label className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1.5">
+            Pilih CV Referensi <span className="text-text-muted dark:text-text-muted-dark font-normal">(opsional)</span>
+          </label>
+          <Select
+            value={form.cv_id}
+            onChange={(e) => handleLoadCV(e.target.value)}
+            hint="Pilih CV untuk mengisi otomatis data dirimu."
+          >
+            <option value="">Pilih CV (opsional) — untuk isi data diri otomatis</option>
+            {cvList.map((cv) => (
+              <option key={cv.id} value={cv.id}>{cv.title}</option>
+            ))}
+          </Select>
+          {isLoadingCV && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-text-muted dark:text-text-muted-dark">
+              <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span>Memuat data CV...</span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Input label="Nama Lengkap" required placeholder="contoh: Muh. Zulkifli" value={form.personal.name} onChange={updatePersonal('name')} />
+          <Input label="Tempat, Tanggal Lahir" required placeholder="contoh: Cilellang, 14 Februari 2003" value={form.personal.birthPlace} onChange={updatePersonal('birthPlace')} />
+          <Select label="Jenis Kelamin" required value={form.personal.gender} onChange={updatePersonal('gender')}>
+            <option value="">Pilih jenis kelamin...</option>
+            <option value="Laki-laki">Laki-laki</option>
+            <option value="Perempuan">Perempuan</option>
+          </Select>
+          <Input label="Pendidikan Terakhir" required placeholder="contoh: S1 Teknik Informatika" value={form.personal.lastEducation} onChange={updatePersonal('lastEducation')} />
+          <Input label="Alamat" required placeholder="contoh: Jl. Poros Makassar, Barru" value={form.personal.address} onChange={updatePersonal('address')} />
+          <Input label="Nomor HP" required placeholder="contoh: 0812-3456-7890" value={form.personal.phone} onChange={updatePersonal('phone')} />
+          <Input label="E-mail" required type="email" placeholder="contoh: nama@email.com" value={form.personal.email} onChange={updatePersonal('email')} />
+          <Input label="Portofolio / Website" placeholder="contoh: github.com/username" value={form.personal.portfolio} onChange={updatePersonal('portfolio')} hint="Opsional — tambahkan link portofolio atau website pribadi" />
+        </div>
+      </Section>
+
+      {/* Section B: Data Lamaran */}
+      <Section
+        id="B"
+        title="Data Lamaran"
+        subtitle="Perusahaan & posisi yang dituju"
+        icon="briefcase"
+        completed={isBlockBComplete}
+        defaultOpen
+      >
+        <div className="grid md:grid-cols-2 gap-4">
+          <Input label="Nama Perusahaan" required placeholder="contoh: PT Pertamina" value={form.company} onChange={update('company')} />
+          <Input label="Divisi / Departemen Tujuan" required placeholder="contoh: HRD, Manajer Rekrutmen" value={form.recipientTitle} onChange={update('recipientTitle')} />
+          <Input label="Posisi yang Dilamar" required placeholder="contoh: Staf Admin Pembangkit" value={form.position} onChange={update('position')} />
+          <Input label="Bidang / Industri Perusahaan" placeholder="contoh: energi, teknologi" value={form.companyField} onChange={update('companyField')} hint="Opsional — membantu AI menyesuaikan konteks industri" />
+          <div className="md:col-span-2">
+            <Input label="Pengalaman Kerja Relevan" placeholder="contoh: 2 tahun admin perkantoran" value={form.relevantExperience} onChange={update('relevantExperience')} hint="Opsional — ceritakan pengalaman yang relevan dengan posisi" />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-2">
+            Sumber Informasi Lowongan <span className="text-text-muted dark:text-text-muted-dark font-normal">(opsional)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {infoSourceOptions.map((opt) => (
+              <ToggleChip
+                key={opt}
+                active={form.infoSource === opt || (opt === 'Lainnya' && infoSourceOther && form.infoSource === infoSourceOther)}
+                onClick={() => setForm({ ...form, infoSource: opt })}
+              >
+                {opt}
+              </ToggleChip>
             ))}
           </div>
-        )}
-
-        {showRecommendations && (
-          <textarea
-            value={customHighlight}
-            onChange={(e) => setCustomHighlight(e.target.value)}
-            placeholder="Atau tulis poin tambahan sendiri..."
-            className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-border dark:border-border-dark rounded-lg text-body text-text-primary dark:text-text-primary-dark placeholder:text-text-muted dark:placeholder:text-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors resize-vertical min-h-[60px]"
-            rows={2}
-          />
-        )}
-      </div>
-
-      {finalHighlights.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {finalHighlights.map((h) => (
-            <span key={h} className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">{h}</span>
-          ))}
+          {form.infoSource === 'Lainnya' && (
+            <div className="mt-3">
+              <Input
+                placeholder="Sebutkan sumber informasi lowongan..."
+                value={infoSourceOther}
+                onChange={(e) => {
+                  setInfoSourceOther(e.target.value)
+                  setForm({ ...form, infoSource: e.target.value })
+                }}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </Section>
 
-      <div className="flex gap-3 pt-2">
-        <Button onClick={onGenerate} loading={loading} className="flex-1 md:flex-none">
-          {loading ? 'DeepSeek sedang menulis...' : 'Generate Surat'}
-        </Button>
-        {hasContent && (
-          <Button variant="secondary">Simpan Draft</Button>
-        )}
+      {/* Section C: Lampiran */}
+      <Section
+        id="C"
+        title="Lampiran"
+        subtitle="Dokumen pendukung yang dilampirkan"
+        icon="paperclip"
+        completed={isBlockCComplete}
+        defaultOpen={false}
+      >
+        <div>
+          <p className="text-sm text-text-muted dark:text-text-muted-dark mb-3">Pilih dokumen yang akan dilampirkan pada surat.</p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {attachmentOptions.map((opt) => {
+              const checked = currentAttachments.includes(opt.key)
+              return (
+                <label
+                  key={opt.key}
+                  className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer transition-all duration-200 ${
+                    checked
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border dark:border-border-dark hover:border-primary/40 hover:bg-surface-2 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <div className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                    checked ? 'bg-primary border-primary' : 'border-border dark:border-border-dark bg-white dark:bg-slate-800'
+                  }`}>
+                    {checked && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    )}
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleAttachment(opt.key)}
+                    className="sr-only"
+                  />
+                  <span className={`text-sm ${checked ? 'text-text-primary dark:text-text-primary-dark font-medium' : 'text-text-primary dark:text-text-primary-dark'}`}>
+                    {opt.label}
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+          <div className="mt-4">
+            <Input
+              label="Lampiran lainnya"
+              placeholder="contoh: Surat Keterangan Pengalaman Kerja"
+              value={customAttachment}
+              onChange={(e) => setForm({ ...form, customAttachment: e.target.value })}
+              hint="Opsional — ketik lampiran tambahan di luar daftar"
+            />
+          </div>
+          {attachmentsList.length > 0 && (
+            <div className="mt-4 p-4 rounded-xl bg-surface-2 dark:bg-slate-800/50 border border-border/60 dark:border-border-dark/60">
+              <div className="flex items-center gap-2 mb-2.5">
+                <SectionIcon name="paperclip" className="w-3.5 h-3.5 text-text-muted dark:text-text-muted-dark" />
+                <span className="text-xs font-semibold text-text-muted dark:text-text-muted-dark uppercase tracking-wider">Ringkasan ({attachmentsList.length})</span>
+              </div>
+              <ol className="space-y-1.5">
+                {attachmentsList.map((label, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-text-primary dark:text-text-primary-dark">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">{i + 1}</span>
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* Section D: Lokasi & Tanggal */}
+      <Section
+        id="D"
+        title="Lokasi & Tanggal"
+        subtitle="Tempat dan waktu penulisan surat"
+        icon="calendar"
+        completed={isBlockDComplete}
+        defaultOpen={false}
+      >
+        <div className="grid md:grid-cols-2 gap-4">
+          <Input label="Kota Penulisan" required placeholder="contoh: Barru" value={form.city} onChange={update('city')} />
+          <Input label="Tanggal Surat" required type="date" value={form.letterDate} onChange={update('letterDate')} />
+        </div>
+      </Section>
+
+      {/* Highlights / AI Recommendations */}
+      <section className="rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-2-dark shadow-card overflow-hidden">
+        <div className="px-4 py-3.5 flex items-center gap-3 border-b border-border/60 dark:border-border-dark/60">
+          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center shadow-sm">
+            <SectionIcon name="sparkle" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">Poin yang Ingin Ditonjolkan</h4>
+            <p className="text-xs text-text-muted dark:text-text-muted-dark mt-0.5">Bantu AI menonjolkan keunggulanmu yang paling relevan</p>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {showRecommendBtn && (
+            <div className="rounded-xl border border-dashed border-primary/40 bg-primary/[0.03] p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-text-primary dark:text-text-primary-dark">Butuh inspirasi?</p>
+                <p className="text-xs text-text-muted dark:text-text-muted-dark mt-0.5">Minta AI menganalisis posisi & CV untuk rekomendasi poin unggulan.</p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleLoadRecommendations}
+                loading={isLoadingHighlights}
+                className="shrink-0"
+              >
+                {isLoadingHighlights ? 'Menganalisis...' : 'Muat Rekomendasi AI'}
+              </Button>
+            </div>
+          )}
+
+          {isLoadingHighlights && (
+            <div className="flex items-center gap-3 text-sm text-text-muted dark:text-text-muted-dark p-4 rounded-xl bg-surface-2 dark:bg-slate-800/50">
+              <div className="relative w-8 h-8">
+                <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
+                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
+              </div>
+              <div>
+                <p className="font-medium text-text-primary dark:text-text-primary-dark">AI sedang menganalisis</p>
+                <p className="text-xs">Mencocokkan profil dengan posisi yang dilamar...</p>
+              </div>
+            </div>
+          )}
+
+          {showRecommendations && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-text-muted dark:text-text-muted-dark uppercase tracking-wider">Rekomendasi</p>
+              <div className="space-y-2">
+                {recommendedHighlights.map((item) => (
+                  <label
+                    key={item}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${
+                      selectedHighlights.includes(item)
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border dark:border-border-dark hover:border-primary/40 hover:bg-surface-2 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <div className={`flex-shrink-0 mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                      selectedHighlights.includes(item) ? 'bg-primary border-primary' : 'border-border dark:border-border-dark bg-white dark:bg-slate-800'
+                    }`}>
+                      {selectedHighlights.includes(item) && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      )}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={selectedHighlights.includes(item)}
+                      onChange={() => toggleHighlight(item)}
+                      className="sr-only"
+                    />
+                    <span className="text-sm text-text-primary dark:text-text-primary-dark leading-relaxed">{item}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showRecommendations && (
+            <div>
+              <label className="block text-xs font-semibold text-text-muted dark:text-text-muted-dark uppercase tracking-wider mb-1.5">Poin Tambahan</label>
+              <textarea
+                value={customHighlight}
+                onChange={(e) => setCustomHighlight(e.target.value)}
+                placeholder="Tulis poin tambahan yang ingin ditonjolkan..."
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-border dark:border-border-dark rounded-xl text-body text-text-primary dark:text-text-primary-dark placeholder:text-text-muted dark:placeholder:text-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary hover:border-primary/50 transition-all resize-vertical min-h-[70px]"
+                rows={2}
+              />
+            </div>
+          )}
+
+          {finalHighlights.length > 0 && (
+            <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/[0.02] border border-primary/20">
+              <div className="flex items-center gap-2 mb-2.5">
+                <SectionIcon name="sparkle" className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Poin Terpilih ({finalHighlights.length})</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {finalHighlights.map((h) => (
+                  <span key={h} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 text-text-primary dark:text-text-primary-dark rounded-full text-sm border border-primary/20 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Action bar */}
+      <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-gradient-to-t from-surface via-surface to-transparent dark:from-surface-dark dark:via-surface-dark dark:to-transparent border-t border-border/60 dark:border-border-dark/60 backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            onClick={onGenerate}
+            loading={loading}
+            size="md"
+            className="flex-1 sm:flex-none shadow-sm shadow-primary/20"
+          >
+            <SectionIcon name="sparkle" className="w-3.5 h-3.5" />
+            {loading ? 'AI sedang menulis...' : 'Generate Surat'}
+          </Button>
+          {hasContent && (
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={onSaveDraft}
+              loading={saving}
+              className="flex-1 sm:flex-none"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z M17 21v-8H7v8 M7 3v5h8" />
+              </svg>
+              {saving ? 'Menyimpan...' : 'Simpan Draft'}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )

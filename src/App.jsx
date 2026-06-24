@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import useThemeStore from './store/themeStore'
 import useToastStore from './store/toastStore'
+import useAuthStore from './store/authStore'
+import ProtectedRoute from './components/common/ProtectedRoute'
 import Toast from './components/common/Toast'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/Auth/LoginPage'
@@ -23,10 +25,12 @@ function ToastContainer() {
 
 export default function App() {
   const initTheme = useThemeStore((s) => s.initTheme)
+  const bootstrap = useAuthStore((s) => s.bootstrap)
 
   useEffect(() => {
     initTheme()
-  }, [initTheme])
+    bootstrap()
+  }, [initTheme, bootstrap])
 
   return (
     <BrowserRouter>
@@ -34,11 +38,11 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/cv/new" element={<CVBuilderPage />} />
-        <Route path="/cv/:id/edit" element={<CVBuilderPage />} />
-        <Route path="/letter/new" element={<LetterBuilderPage />} />
-        <Route path="/letter/:id/edit" element={<LetterBuilderPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/cv/new" element={<ProtectedRoute><CVBuilderPage /></ProtectedRoute>} />
+        <Route path="/cv/:id/edit" element={<ProtectedRoute><CVBuilderPage /></ProtectedRoute>} />
+        <Route path="/letter/new" element={<ProtectedRoute><LetterBuilderPage /></ProtectedRoute>} />
+        <Route path="/letter/:id/edit" element={<ProtectedRoute><LetterBuilderPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ToastContainer />

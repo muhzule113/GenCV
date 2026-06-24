@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import useAuthStore from '../../store/authStore'
+import useAuth from '../../hooks/useAuth'
 import useThemeStore from '../../store/themeStore'
 
 const navItems = [
@@ -10,7 +10,7 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation()
-  const { signOut } = useAuthStore()
+  const { signOut } = useAuth()
   const { theme, toggleTheme } = useThemeStore()
 
   return (

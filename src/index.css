@@ -5,6 +5,9 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-white dark:bg-surface-dark text-text-primary dark:text-text-primary-dark font-sans text-body m-0 antialiased;
   }
@@ -13,5 +16,319 @@
 @layer components {
   .container-page {
     @apply max-w-container mx-auto px-4 w-full;
+  }
+}
+
+@layer components {
+  .cv-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 40px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: 'Inter', 'Helvetica', 'Arial', sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08);
+    box-sizing: border-box;
+    transform-origin: top center;
+  }
+
+  .cv-section {
+    margin-top: 14px;
+  }
+  .cv-section:first-of-type {
+    margin-top: 0;
+  }
+
+  .cv-section-title {
+    font-size: 11pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #1D4ED8;
+    border-bottom: 1.5px solid #1D4ED8;
+    padding-bottom: 3px;
+    margin: 0 0 8px 0;
+  }
+  .cv-section-title-modern {
+    color: #1D4ED8;
+    border-bottom-color: #1D4ED8;
+  }
+
+  .cv-header-clean {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .cv-header-modern {
+    background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%);
+    margin: -40px -40px 18px -40px;
+    padding: 28px 40px 22px 40px;
+    color: #ffffff;
+  }
+
+  .cv-name {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 2px 0;
+    letter-spacing: -0.01em;
+  }
+  .cv-name-light {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+    text-align: center;
+  }
+  .cv-jobtitle {
+    font-size: 11pt;
+    color: #475569;
+    margin: 0 0 6px 0;
+    font-weight: 500;
+  }
+  .cv-jobtitle-light {
+    font-size: 11pt;
+    color: #dbeafe;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+    text-align: center;
+  }
+  .cv-contact {
+    font-size: 9pt;
+    color: #475569;
+    margin: 2px 0;
+    line-height: 1.5;
+  }
+  .cv-contact-light {
+    font-size: 9pt;
+    color: #dbeafe;
+    margin: 2px 0;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .cv-item {
+    margin-bottom: 8px;
+  }
+  .cv-item:last-child {
+    margin-bottom: 0;
+  }
+  .cv-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .cv-item-title {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .cv-item-sub {
+    font-size: 9.5pt;
+    color: #475569;
+    margin: 2px 0 4px 0;
+    font-style: italic;
+  }
+  .cv-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .cv-meta {
+    font-size: 9pt;
+    color: #64748b;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  .cv-thesis {
+    font-size: 9pt;
+    color: #64748b;
+    font-style: italic;
+    margin: 2px 0 0 0;
+  }
+  .cv-tech {
+    font-size: 9pt;
+    color: #475569;
+    font-style: italic;
+    margin: 2px 0;
+  }
+
+  .cv-text {
+    font-size: 10pt;
+    line-height: 1.55;
+    color: #1e293b;
+    margin: 0;
+    text-align: justify;
+  }
+  .cv-text-sm {
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: #334155;
+    margin: 2px 0 0 0;
+  }
+
+  .cv-bullets {
+    list-style: none;
+    padding-left: 0;
+    margin: 4px 0 0 0;
+  }
+  .cv-bullets li {
+    position: relative;
+    padding-left: 14px;
+    margin-bottom: 3px;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #1e293b;
+  }
+  .cv-bullets li::before {
+    content: '•';
+    position: absolute;
+    left: 2px;
+    color: #1D4ED8;
+    font-weight: 700;
+  }
+
+  .cv-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .cv-col-label {
+    font-size: 10pt;
+    font-weight: 600;
+    color: #1D4ED8;
+    margin: 0 0 4px 0;
+  }
+}
+
+@layer utilities {
+  .cv-scaler {
+    display: flex;
+    justify-content: center;
+    padding: 16px 0;
+  }
+}
+
+@media print {
+  .cv-page {
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+    width: auto;
+    min-height: auto;
+  }
+  .letter-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 2.5cm 2.5cm 2.5cm 3cm !important;
+    width: auto !important;
+    min-height: auto !important;
+  }
+}
+
+@layer components {
+  .letter-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 2.5cm 2.5cm 2.5cm 3cm;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: 'Times New Roman', 'Liberation Serif', 'DejaVu Serif', Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.08);
+    box-sizing: border-box;
+    transform-origin: top center;
+    text-align: left;
+  }
+
+  .letter-city-date {
+    text-align: right;
+    margin-bottom: 16pt;
+  }
+
+  .letter-recipient {
+    margin-bottom: 14pt;
+  }
+  .letter-recipient p {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .letter-greeting {
+    margin: 0 0 12pt 0;
+  }
+
+  .letter-intro {
+    margin: 0 0 6pt 0;
+  }
+
+  .letter-identity {
+    margin-bottom: 14pt;
+  }
+  .letter-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6pt;
+    margin-bottom: 2pt;
+  }
+  .letter-label {
+    flex: 0 0 150pt;
+    font-weight: normal;
+  }
+  .letter-sep {
+    flex: 0 0 8pt;
+  }
+  .letter-value {
+    flex: 1 1 auto;
+  }
+  .letter-link {
+    color: #1D4ED8;
+    text-decoration: underline;
+  }
+
+  .letter-body {
+    margin: 0 0 10pt 0;
+    text-align: justify;
+  }
+  .letter-position {
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .letter-attachments {
+    margin: 0 0 14pt 36pt;
+    padding: 0;
+  }
+  .letter-attachments li {
+    margin-bottom: 2pt;
+  }
+
+  .letter-paragraphs {
+    margin-bottom: 14pt;
+  }
+  .letter-para {
+    text-align: justify;
+    margin: 0 0 10pt 0;
+  }
+  .letter-para:last-child {
+    margin-bottom: 0;
+  }
+
+  .letter-signature {
+    margin-top: 18pt;
+    margin-left: 60%;
+  }
+  .letter-signature p {
+    margin: 0;
+  }
+  .letter-sig-name {
+    margin-top: 36pt !important;
+    font-weight: 700;
   }
 }
