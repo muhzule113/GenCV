@@ -55,6 +55,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Times-Bold',
     textTransform: 'uppercase',
   },
+  perihalRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+    marginBottom: 4,
+    fontSize: 12,
+  },
+  perihalLabel: {
+    width: 50,
+    fontFamily: 'Times-Bold',
+  },
+  perihalSep: {
+    width: 8,
+  },
+  perihalValue: {
+    flex: 1,
+  },
   attachmentIntro: {
     marginBottom: 4,
     fontSize: 12,
@@ -65,8 +81,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingLeft: 24,
   },
-  attachmentNum: {
-    width: 22,
+  attachmentBullet: {
+    width: 16,
   },
   closing: {
     marginTop: 10,
@@ -137,6 +153,12 @@ export function CoverLetterTemplate({ data }) {
         <Text style={styles.recipient}>Kepada Yth.</Text>
         <Text style={styles.recipient}>{data.recipientTitle || 'HRD'}</Text>
         <Text style={styles.recipient}>Di {data.company || '[NAMA PERUSAHAAN]'}</Text>
+
+        <View style={styles.perihalRow}>
+          <Text style={styles.perihalLabel}>Perihal</Text>
+          <Text style={styles.perihalSep}>: </Text>
+          <Text style={styles.perihalValue}>Lamaran Pekerjaan sebagai <Text style={styles.positionBold}>{position || '[POSISI]'}</Text></Text>
+        </View>
 
         <Text style={styles.greeting}>Dengan hormat,</Text>
 
@@ -209,7 +231,7 @@ export function CoverLetterTemplate({ data }) {
         <View>
           {attachments.map((label, i) => (
             <View key={i} style={styles.attachmentItem}>
-              <Text style={styles.attachmentNum}>{i + 1}.</Text>
+              <Text style={styles.attachmentBullet}>&#8226;</Text>
               <Text>{label}</Text>
             </View>
           ))}

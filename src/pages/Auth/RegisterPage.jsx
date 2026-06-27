@@ -89,7 +89,7 @@ export default function RegisterPage() {
             <Input label="Email" type="email" placeholder="nama@email.com" value={form.email} onChange={update('email')} error={errors.email} />
             <Input label="Password" type={showPassword ? 'text' : 'password'} placeholder="Min. 6 karakter" value={form.password} onChange={update('password')} error={errors.password} />
             <Input label="Konfirmasi Password" type={showPassword ? 'text' : 'password'} placeholder="Ulangi password" value={form.confirmPassword} onChange={update('confirmPassword')} error={errors.confirmPassword} />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-xs text-text-muted dark:text-text-muted-dark hover:text-primary">
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-sm text-text-muted dark:text-text-muted-dark hover:text-primary">
               {showPassword ? 'Sembunyikan' : 'Tampilkan'} password
             </button>
             <Button type="submit" className="w-full" size="lg" loading={loading}>Buat Akun</Button>

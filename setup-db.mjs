@@ -44,7 +44,7 @@ CREATE POLICY "cvs_manage" ON cvs FOR ALL USING (auth.uid() = user_id) WITH CHEC
 CREATE TABLE IF NOT EXISTS cover_letters (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
-  cv_id UUID,
+  cv_id UUID NOT NULL,
   position VARCHAR(200) NOT NULL,
   company VARCHAR(200) NOT NULL,
   content TEXT NOT NULL DEFAULT '',
@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS cover_letters (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS cover_letters_user_id_idx ON cover_letters(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS cover_letters_cv_user_unique ON cover_letters(cv_id, user_id);
 ALTER TABLE cover_letters ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "cl_manage" ON cover_letters;
 CREATE POLICY "cl_manage" ON cover_letters FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);

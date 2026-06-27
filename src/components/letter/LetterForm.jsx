@@ -23,12 +23,7 @@ const attachmentOptions = [
 
 const defaultAttachments = ['cv', 'foto', 'ktp', 'ijazah', 'transkrip']
 
-const SECTIONS = [
-  { id: 'A', title: 'Data Pelamar', subtitle: 'Identitas & kontak', icon: 'user' },
-  { id: 'B', title: 'Data Lamaran', subtitle: 'Perusahaan & posisi', icon: 'briefcase' },
-  { id: 'C', title: 'Lampiran', subtitle: 'Dokumen pendukung', icon: 'paperclip' },
-  { id: 'D', title: 'Lokasi & Tanggal', subtitle: 'Tempat & waktu surat', icon: 'calendar' },
-]
+
 
 function SectionIcon({ name, className = 'w-4 h-4' }) {
   const icons = {
@@ -50,6 +45,9 @@ function SectionIcon({ name, className = 'w-4 h-4' }) {
     chevron: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
     ),
+    exclamation: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+    ),
   }
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -58,10 +56,10 @@ function SectionIcon({ name, className = 'w-4 h-4' }) {
   )
 }
 
-function Section({ id, title, subtitle, icon, children, defaultOpen = true, completed = false }) {
+function Section({ id, title, subtitle, icon, children, defaultOpen = true, completed = false, disabled = false }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <section className="group rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-2-dark shadow-card overflow-hidden transition-all duration-300 hover:shadow-md">
+    <section className={`group rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-2-dark shadow-card overflow-hidden transition-all duration-300 hover:shadow-md ${disabled ? 'opacity-60 pointer-events-none' : ''}`}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -85,7 +83,7 @@ function Section({ id, title, subtitle, icon, children, defaultOpen = true, comp
           <p className="text-xs text-text-muted dark:text-text-muted-dark mt-0.5">{subtitle}</p>
         </div>
         <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-text-muted dark:text-text-muted-dark transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
-          <SectionIcon name="chevron" className="w-3.5 h-3.5" />
+          <SectionIcon name="chevron" className="w-4 h-4" />
         </div>
       </button>
       <div className={`grid transition-all duration-300 ease-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
@@ -141,7 +139,7 @@ function ToggleChip({ active, onClick, children, icon }) {
       {icon && <span className={active ? 'text-white' : 'text-text-muted dark:text-text-muted-dark'}>{icon}</span>}
       <span>{children}</span>
       {active && (
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
       )}
@@ -149,7 +147,7 @@ function ToggleChip({ active, onClick, children, icon }) {
   )
 }
 
-export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, hasContent }) {
+export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, hasContent, existingLetter, onViewExisting }) {
   const [cvList, setCvList] = useState([])
   const [isLoadingCV, setIsLoadingCV] = useState(false)
   const [infoSourceOther, setInfoSourceOther] = useState('')
@@ -157,9 +155,9 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   const [recommendedHighlights, setRecommendedHighlights] = useState([])
   const [selectedHighlights, setSelectedHighlights] = useState([])
   const [customHighlight, setCustomHighlight] = useState('')
+  const [cvSkills, setCvSkills] = useState(null)
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
-  const updatePersonal = (field) => (e) => setForm({ ...form, personal: { ...form.personal, [field]: e.target.value } })
 
   useEffect(() => {
     api.get('/api/cv').then((res) => {
@@ -171,14 +169,18 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
     setRecommendedHighlights([])
     setSelectedHighlights([])
     setCustomHighlight('')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.position])
 
   useEffect(() => {
-    if (form.infoSource !== 'Lainnya') setInfoSourceOther('')
+    setInfoSourceOther('')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.infoSource])
 
   const handleLoadCV = async (cvId) => {
-    setForm({ ...form, cv_id: cvId })
+    setForm({ ...form, cv_id: cvId, highlights: [] })
+    setCvSkills(null)
+    if (onViewExisting) onViewExisting(cvId)
     if (!cvId) return
     setIsLoadingCV(true)
     try {
@@ -186,21 +188,30 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       if (res.data?.success && res.data.data?.data) {
         const d = res.data.data.data
         const p = d.personal || {}
+        const edu = d.educations?.[0]
+        const lastEdu = edu ? `${edu.degree || ''} ${edu.field || ''}`.trim() : ''
+
         setForm((prev) => ({
           ...prev,
           cv_id: cvId,
           personal: {
-            name: prev.personal.name || p.name || '',
-            email: prev.personal.email || p.email || '',
-            phone: prev.personal.phone || p.phone || '',
-            address: prev.personal.address || '',
-            birthPlace: prev.personal.birthPlace || '',
-            birthDate: prev.personal.birthDate || '',
-            gender: prev.personal.gender || '',
-            lastEducation: prev.personal.lastEducation || (d.educations?.[0]?.degree ? `${d.educations[0].degree} ${d.educations[0].field || ''}`.trim() : ''),
-            portfolio: prev.personal.portfolio || p.portfolio || '',
+            name: p.name || '',
+            email: p.email || '',
+            phone: p.phone || '',
+            address: p.address || '',
+            birthPlace: p.birthPlace || '',
+            birthDate: p.birthDate || '',
+            gender: p.gender || '',
+            lastEducation: lastEdu,
+            portfolio: p.portfolio || '',
           },
         }))
+
+        const skills = d.skills || {}
+        setCvSkills({
+          technical: skills.technical || [],
+          soft: skills.soft || [],
+        })
       }
     } catch (err) {
       console.error('Failed to load CV', err)
@@ -220,12 +231,13 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   }
 
   useEffect(() => {
-    const finalHighlights = getFinalHighlights()
-    if (JSON.stringify(finalHighlights) !== JSON.stringify(form.highlights)) {
-      setForm({ ...form, highlights: finalHighlights })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedHighlights, customHighlight])
+    const h = [...selectedHighlights, customHighlight].filter(Boolean)
+    setForm((prev) =>
+      JSON.stringify(h) !== JSON.stringify(prev.highlights)
+        ? { ...prev, highlights: h }
+        : prev
+    )
+  }, [selectedHighlights, customHighlight, setForm])
 
   const handleLoadRecommendations = async () => {
     setIsLoadingHighlights(true)
@@ -264,55 +276,76 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   )
   if (customAttachment.trim()) attachmentsList.push(customAttachment.trim())
 
-  // Section completion checks
-  const isBlockAComplete = form.personal.name && form.personal.birthPlace && form.personal.gender &&
-    form.personal.lastEducation && form.personal.address && form.personal.phone && form.personal.email
+  const isBlockAComplete = form.cv_id && form.personal.name
   const isBlockBComplete = form.company && form.recipientTitle && form.position
   const isBlockCComplete = currentAttachments.length > 0
   const isBlockDComplete = form.city && form.letterDate
 
+  const identityFields = [
+    { label: 'Nama Lengkap', value: form.personal.name },
+    { label: 'Tempat, Tgl Lahir', value: form.personal.birthPlace && form.personal.birthDate ? `${form.personal.birthPlace}, ${form.personal.birthDate}` : (form.personal.birthPlace || form.personal.birthDate) },
+    { label: 'Jenis Kelamin', value: form.personal.gender },
+    { label: 'Pendidikan Terakhir', value: form.personal.lastEducation },
+    { label: 'Alamat', value: form.personal.address },
+    { label: 'Nomor HP', value: form.personal.phone },
+    { label: 'E-mail', value: form.personal.email },
+    { label: 'Portofolio', value: form.personal.portfolio },
+  ].filter((f) => f.value)
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent border border-primary/10 p-5">
         <div className="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
         <div className="absolute -right-4 -bottom-8 w-24 h-24 bg-primary/10 rounded-full blur-xl" />
         <div className="relative">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold mb-2">
-            <SectionIcon name="sparkle" className="w-3 h-3" />
+            <SectionIcon name="sparkle" className="w-4 h-4" />
             <span>AI Cover Letter</span>
           </div>
           <h3 className="text-xl font-semibold text-text-primary dark:text-text-primary-dark">Data Surat Lamaran</h3>
-          <p className="text-sm text-text-muted dark:text-text-muted-dark mt-1">Lengkapi formulir untuk membuat surat lamaran profesional dengan bantuan AI.</p>
+          <p className="text-sm text-text-muted dark:text-text-muted-dark mt-1">Pilih CV sebagai dasar pembuatan surat lamaran.</p>
         </div>
       </div>
 
-      {/* Section A: Data Pelamar */}
+      {existingLetter && (
+        <div className="rounded-2xl border border-warning/40 bg-warning/5 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+              <SectionIcon name="exclamation" className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">Surat lamaran untuk CV ini sudah ada</p>
+              <p className="text-xs text-text-muted dark:text-text-muted-dark mt-0.5">Hanya diperbolehkan satu surat per CV. Hapus surat yang ada jika ingin membuat ulang.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Section
         id="A"
         title="Data Pelamar"
-        subtitle="Identitas pribadi & kontak"
+        subtitle="Diambil otomatis dari CV"
         icon="user"
         completed={isBlockAComplete}
         defaultOpen
       >
         <div>
           <label className="block text-sm font-medium text-text-primary dark:text-text-primary-dark mb-1.5">
-            Pilih CV Referensi <span className="text-text-muted dark:text-text-muted-dark font-normal">(opsional)</span>
+            Pilih CV <span className="text-danger">*</span>
           </label>
           <Select
             value={form.cv_id}
             onChange={(e) => handleLoadCV(e.target.value)}
-            hint="Pilih CV untuk mengisi otomatis data dirimu."
+            hint="Pilih CV untuk mengisi data diri otomatis. Hanya 1 surat per CV."
           >
-            <option value="">Pilih CV (opsional) — untuk isi data diri otomatis</option>
+            <option value="">Pilih CV (wajib)</option>
             {cvList.map((cv) => (
               <option key={cv.id} value={cv.id}>{cv.title}</option>
             ))}
           </Select>
           {isLoadingCV && (
             <div className="mt-2 flex items-center gap-2 text-xs text-text-muted dark:text-text-muted-dark">
-              <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
@@ -321,23 +354,41 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <Input label="Nama Lengkap" required placeholder="contoh: Muh. Zulkifli" value={form.personal.name} onChange={updatePersonal('name')} />
-          <Input label="Tempat, Tanggal Lahir" required placeholder="contoh: Cilellang, 14 Februari 2003" value={form.personal.birthPlace} onChange={updatePersonal('birthPlace')} />
-          <Select label="Jenis Kelamin" required value={form.personal.gender} onChange={updatePersonal('gender')}>
-            <option value="">Pilih jenis kelamin...</option>
-            <option value="Laki-laki">Laki-laki</option>
-            <option value="Perempuan">Perempuan</option>
-          </Select>
-          <Input label="Pendidikan Terakhir" required placeholder="contoh: S1 Teknik Informatika" value={form.personal.lastEducation} onChange={updatePersonal('lastEducation')} />
-          <Input label="Alamat" required placeholder="contoh: Jl. Poros Makassar, Barru" value={form.personal.address} onChange={updatePersonal('address')} />
-          <Input label="Nomor HP" required placeholder="contoh: 0812-3456-7890" value={form.personal.phone} onChange={updatePersonal('phone')} />
-          <Input label="E-mail" required type="email" placeholder="contoh: nama@email.com" value={form.personal.email} onChange={updatePersonal('email')} />
-          <Input label="Portofolio / Website" placeholder="contoh: github.com/username" value={form.personal.portfolio} onChange={updatePersonal('portfolio')} hint="Opsional — tambahkan link portofolio atau website pribadi" />
-        </div>
+        {form.personal.name && (
+          <div className="p-4 rounded-xl bg-surface-2 dark:bg-slate-800/50 border border-border/60 dark:border-border-dark/60">
+            <p className="text-xs font-semibold text-text-muted dark:text-text-muted-dark uppercase tracking-wider mb-2">Identitas dari CV</p>
+            <div className="space-y-1.5">
+              {identityFields.map((f) => (
+                <div key={f.label} className="flex text-sm">
+                  <span className="text-text-muted dark:text-text-muted-dark w-32 shrink-0">{f.label}</span>
+                  <span className="text-text-primary dark:text-text-primary-dark">{f.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {cvSkills && (cvSkills.technical.length > 0 || cvSkills.soft.length > 0) && (
+          <div className="p-4 rounded-xl bg-surface-2 dark:bg-slate-800/50 border border-border/60 dark:border-border-dark/60">
+            <p className="text-xs font-semibold text-text-muted dark:text-text-muted-dark uppercase tracking-wider mb-2">Keahlian dari CV</p>
+            {cvSkills.technical.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {cvSkills.technical.map((s) => (
+                  <span key={s} className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">{s}</span>
+                ))}
+              </div>
+            )}
+            {cvSkills.soft.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {cvSkills.soft.map((s) => (
+                  <span key={s} className="px-2 py-0.5 bg-surface dark:bg-slate-700 text-text-muted dark:text-text-muted-dark rounded text-xs">{s}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </Section>
 
-      {/* Section B: Data Lamaran */}
       <Section
         id="B"
         title="Data Lamaran"
@@ -386,7 +437,6 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
         </div>
       </Section>
 
-      {/* Section C: Lampiran */}
       <Section
         id="C"
         title="Lampiran"
@@ -443,7 +493,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
           {attachmentsList.length > 0 && (
             <div className="mt-4 p-4 rounded-xl bg-surface-2 dark:bg-slate-800/50 border border-border/60 dark:border-border-dark/60">
               <div className="flex items-center gap-2 mb-2.5">
-                <SectionIcon name="paperclip" className="w-3.5 h-3.5 text-text-muted dark:text-text-muted-dark" />
+                <SectionIcon name="paperclip" className="w-4 h-4 text-text-muted dark:text-text-muted-dark" />
                 <span className="text-xs font-semibold text-text-muted dark:text-text-muted-dark uppercase tracking-wider">Ringkasan ({attachmentsList.length})</span>
               </div>
               <ol className="space-y-1.5">
@@ -459,7 +509,6 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
         </div>
       </Section>
 
-      {/* Section D: Lokasi & Tanggal */}
       <Section
         id="D"
         title="Lokasi & Tanggal"
@@ -474,7 +523,6 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
         </div>
       </Section>
 
-      {/* Highlights / AI Recommendations */}
       <section className="rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-2-dark shadow-card overflow-hidden">
         <div className="px-4 py-3.5 flex items-center gap-3 border-b border-border/60 dark:border-border-dark/60">
           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center shadow-sm">
@@ -569,7 +617,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
           {finalHighlights.length > 0 && (
             <div className="p-4 rounded-xl bg-gradient-to-br from-primary/5 to-primary/[0.02] border border-primary/20">
               <div className="flex items-center gap-2 mb-2.5">
-                <SectionIcon name="sparkle" className="w-3.5 h-3.5 text-primary" />
+                <SectionIcon name="sparkle" className="w-4 h-4 text-primary" />
                 <span className="text-xs font-semibold text-primary uppercase tracking-wider">Poin Terpilih ({finalHighlights.length})</span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -585,16 +633,16 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
         </div>
       </section>
 
-      {/* Action bar */}
       <div className="sticky bottom-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-gradient-to-t from-surface via-surface to-transparent dark:from-surface-dark dark:via-surface-dark dark:to-transparent border-t border-border/60 dark:border-border-dark/60 backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
             onClick={onGenerate}
             loading={loading}
             size="md"
+            disabled={!form.cv_id || !!existingLetter}
             className="flex-1 sm:flex-none shadow-sm shadow-primary/20"
           >
-            <SectionIcon name="sparkle" className="w-3.5 h-3.5" />
+            <SectionIcon name="sparkle" className="w-4 h-4" />
             {loading ? 'AI sedang menulis...' : 'Generate Surat'}
           </Button>
           {hasContent && (
@@ -605,7 +653,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
               loading={saving}
               className="flex-1 sm:flex-none"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z M17 21v-8H7v8 M7 3v5h8" />
               </svg>
               {saving ? 'Menyimpan...' : 'Simpan Draft'}

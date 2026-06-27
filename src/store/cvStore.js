@@ -9,6 +9,12 @@ const initialState = {
   projects: [],
   certifications: [],
   languages: [],
+  jobAnalysis: {
+    jobDescription: '',
+    position: '',
+    result: null,
+    loading: false,
+  },
 }
 
 const useCVStore = create((set) => ({

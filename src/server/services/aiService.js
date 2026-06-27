@@ -109,6 +109,74 @@ Setiap poin: singkat (maks 10 kata), spesifik, menggunakan data nyata jika terse
   return response.choices[0].message.content;
 }
 
+export async function analyzeJobMatch({ cvData, jobDescription }) {
+  const response = await deepseek.chat.completions.create({
+    model: 'deepseek-chat',
+    messages: [
+      {
+        role: 'system',
+        content: `Kamu adalah konsultan karier dan ATS analyst profesional. Analisis kecocokan antara profil kandidat dengan deskripsi lowongan pekerjaan.
+
+Tugas:
+1. Ekstrak informasi dari deskripsi lowongan: posisi, kualifikasi umum, kualifikasi khusus.
+2. Bandingkan data CV (pengalaman, pendidikan, keahlian, proyek, sertifikasi) dengan deskripsi lowongan.
+3. Berikan analisis detail dan saran perbaikan jika ada ketidakcocokan.
+
+FORMAT OUTPUT: Kembalikan HANYA JSON valid tanpa markdown, tanpa tanda bintang, tanpa \`\`\`json. Contoh struktur:
+{
+  "extracted": {
+    "position": "Frontend Developer",
+    "generalQualifications": ["Pria/wanita max 28 tahun", "Pendidikan minimal D3/S1"],
+    "specificQualifications": ["Menguasai React.js", "Pengalaman 2 tahun di bidang web", "Memahami REST API"]
+  },
+  "matchAnalysis": {
+    "education": { "status": "match|partial|mismatch", "detail": "penjelasan", "suggestion": "saran perbaikan" },
+    "experience": { "status": "match|partial|mismatch", "detail": "penjelasan", "suggestion": "saran perbaikan" },
+    "skills": { "status": "match|partial|mismatch", "detail": "penjelasan", "suggestion": "saran perbaikan" },
+    "overall": { "status": "match|partial|mismatch", "score": 75, "detail": "Kesimpulan umum", "suggestion": "Saran keseluruhan" }
+  }
+}`,
+      },
+      {
+        role: 'user',
+        content: `Data CV Kandidat:
+${JSON.stringify({
+  personal: cvData.personal,
+  summary: cvData.summary,
+  experiences: cvData.experiences?.map(e => ({
+    position: e.position,
+    company: e.company,
+    duration: `${e.startDate || ''} - ${e.isCurrent ? 'Sekarang' : e.endDate || ''}`,
+    description: e.description,
+  })),
+  educations: cvData.educations?.map(e => ({
+    institution: e.institution,
+    degree: e.degree,
+    field: e.field,
+    gpa: e.gpa,
+    thesis: e.thesis,
+  })),
+  skills: cvData.skills,
+  projects: cvData.projects?.map(p => ({
+    name: p.name,
+    description: p.description,
+    techStack: p.techStack || p.tech_stack,
+  })),
+  certifications: cvData.certifications,
+  languages: cvData.languages,
+}, null, 2)}
+
+Deskripsi Lowongan:
+${jobDescription}`,
+      },
+    ],
+    max_tokens: 1000,
+    temperature: 0.4,
+  });
+
+  return response.choices[0].message.content;
+}
+
 export async function generateProfileSummary({ experiences, skills, targetPosition, tone = 'profesional', language = 'id' }) {
   const toneMap = {
     profesional: 'formal dan terstruktur',
