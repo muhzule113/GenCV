@@ -264,6 +264,21 @@
     margin: 0 0 12pt 0;
   }
 
+  .letter-perihal {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 10pt;
+    font-size: 12pt;
+  }
+  .letter-perihal-label {
+    font-weight: 700;
+    flex: 0 0 50pt;
+  }
+  .letter-perihal-value {
+    flex: 1;
+  }
+
   .letter-intro {
     margin: 0 0 6pt 0;
   }
@@ -304,9 +319,17 @@
   .letter-attachments {
     margin: 0 0 14pt 36pt;
     padding: 0;
+    list-style: none;
   }
   .letter-attachments li {
     margin-bottom: 2pt;
+    position: relative;
+    padding-left: 14pt;
+  }
+  .letter-attachments li::before {
+    content: "\2022";
+    position: absolute;
+    left: 0;
   }
 
   .letter-paragraphs {

@@ -83,5 +83,20 @@ export default function useCV() {
     }
   }, [setCvData, setTitle, addToast])
 
-  return { generateSummary, saveDraft, loadCV, reset }
+  const analyzeJobMatch = useCallback(async ({ jobDescription }) => {
+    try {
+      const response = await api.post('/api/cv/analyze-job-match', {
+        cvData,
+        jobDescription,
+      })
+      addToast('Analisis lowongan berhasil!', 'success')
+      return response.data.data
+    } catch (err) {
+      const message = err.response?.data?.error || 'Gagal menganalisis lowongan'
+      addToast(message, 'error')
+      return null
+    }
+  }, [cvData, addToast])
+
+  return { generateSummary, analyzeJobMatch, saveDraft, loadCV, reset }
 }

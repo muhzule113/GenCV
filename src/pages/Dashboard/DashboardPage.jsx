@@ -104,12 +104,7 @@ export default function DashboardPage() {
         await api.post(`/api/cv/${doc.id}/duplicate`, {})
         addToast('CV berhasil diduplikasi', 'success')
       } else {
-        await api.post('/api/letter', {
-          cv_id: doc.cv_id || null,
-          position: doc.position || '',
-          company: doc.company || '',
-        })
-        addToast('Surat berhasil diduplikasi', 'success')
+        addToast('Duplikasi surat tidak didukung; buat surat baru dari CV', 'info')
       }
       await fetchAll()
     } catch (err) {

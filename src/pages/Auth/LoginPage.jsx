@@ -59,14 +59,14 @@ export default function LoginPage() {
             <Input label="Email" type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
             <div>
               <Input label="Password" type={showPassword ? 'text' : 'password'} placeholder="Min. 6 karakter" value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-xs text-text-muted dark:text-text-muted-dark mt-1 hover:text-primary">
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-sm text-text-muted dark:text-text-muted-dark mt-1 hover:text-primary">
                 {showPassword ? 'Sembunyikan' : 'Tampilkan'} password
               </button>
             </div>
             <Button type="submit" className="w-full" size="lg" loading={loading}>Masuk</Button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-text-muted dark:text-text-muted-dark">
+          <p className="mt-6 text-center text-sm text-text-muted dark:text-text-muted-dark">
             Demo: <strong>demo@email.com</strong> / <strong>demo123</strong>
           </p>
         </div>

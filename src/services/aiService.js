@@ -44,6 +44,18 @@ export async function generateProfileSummary({ experiences, skills, targetPositi
   }
 }
 
+export async function analyzeJobMatch({ cvData, jobDescription }) {
+  try {
+    const response = await api.post('/api/cv/analyze-job-match', {
+      cvData,
+      jobDescription,
+    })
+    return response.data.data
+  } catch (error) {
+    throw new Error('AI analysis gagal. Coba lagi nanti.')
+  }
+}
+
 export async function recommendSkills({ position, existingSkills = [] }) {
   try {
     const response = await api.post('/api/cv/recommend-skills', {

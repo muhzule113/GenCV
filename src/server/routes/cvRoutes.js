@@ -9,6 +9,7 @@ import {
   duplicateCV,
   generateSummary,
   recommendSkills,
+  analyzeJobMatch,
 } from '../controllers/cvController.js';
 
 const router = Router();
@@ -19,6 +20,7 @@ router.get('/', listCVs);
 router.post('/', createCV);
 router.post('/generate-summary', generateSummary);
 router.post('/recommend-skills', recommendSkills);
+router.post('/analyze-job-match', analyzeJobMatch);
 router.get('/:id', getCV);
 router.put('/:id', updateCV);
 router.delete('/:id', deleteCV);

@@ -6,10 +6,16 @@ export async function listLetters(req, res) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await insforge.database
+  let query = insforge.database
     .from('cover_letters')
     .select('id, position, company, cv_id, created_at, updated_at', { count: 'exact' })
-    .eq('user_id', req.user.id)
+    .eq('user_id', req.user.id);
+
+  if (req.query.cv_id) {
+    query = query.eq('cv_id', req.query.cv_id);
+  }
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to);
 
@@ -24,19 +30,19 @@ export async function listLetters(req, res) {
 
 export async function createLetter(req, res) {
   const { cv_id, position, company, content } = req.body;
-  if (!position || !company) {
-    return res.status(400).json({ error: 'Position and company are required' });
+  if (!position || !company || !cv_id) {
+    return res.status(400).json({ error: 'Position, company, and cv_id are required' });
   }
 
   const { data, error } = await insforge.database
     .from('cover_letters')
-    .insert({
+    .upsert({
       user_id: req.user.id,
-      cv_id: cv_id || null,
+      cv_id,
       position,
       company,
       content: content || '',
-    })
+    }, { onConflict: 'cv_id, user_id', ignoreDuplicates: false })
     .select()
     .single();
 
@@ -56,7 +62,40 @@ export async function getLetter(req, res) {
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'Cover letter not found' });
 
-  res.json({ success: true, data });
+  let cvData = null;
+  if (data.cv_id) {
+    const { data: cvRecord } = await insforge.database
+      .from('cvs')
+      .select('data')
+      .eq('id', data.cv_id)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    cvData = cvRecord?.data || null;
+  }
+
+  const personal = cvData?.personal || {};
+  const p = {
+    name: personal.name || '',
+    email: personal.email || '',
+    phone: personal.phone || '',
+    address: personal.address || '',
+    birthPlace: personal.birthPlace || '',
+    birthDate: personal.birthDate || '',
+    gender: personal.gender || '',
+    lastEducation: cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : '',
+    portfolio: personal.portfolio || '',
+  };
+
+  res.json({
+    success: true,
+    data: {
+      ...data,
+      personal: p,
+      experiences: cvData?.experiences || [],
+      skills: cvData?.skills || { technical: [], soft: [] },
+      cv_title: cvData?.title || '',
+    },
+  });
 }
 
 export async function updateLetter(req, res) {
@@ -76,7 +115,12 @@ export async function updateLetter(req, res) {
     .select()
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'Surat lamaran untuk CV ini sudah ada' });
+    }
+    return res.status(500).json({ error: error.message });
+  }
   if (!data) return res.status(404).json({ error: 'Cover letter not found' });
 
   res.json({ success: true, data });
@@ -138,32 +182,50 @@ export async function generateLetter(req, res) {
   if (!position || !company) {
     return res.status(400).json({ error: 'Position and company are required' });
   }
+  if (!cv_id) {
+    return res.status(400).json({ error: 'CV harus dipilih untuk membuat surat lamaran' });
+  }
 
-  let cvData = null;
-  if (cv_id) {
-    const { data } = await insforge.database
-      .from('cvs')
-      .select('data')
-      .eq('id', cv_id)
-      .eq('user_id', req.user.id)
-      .maybeSingle();
-    cvData = data?.data || null;
+  const { data: cvRecord, error: cvError } = await insforge.database
+    .from('cvs')
+    .select('data')
+    .eq('id', cv_id)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (cvError) return res.status(500).json({ error: cvError.message });
+  if (!cvRecord) return res.status(404).json({ error: 'CV tidak ditemukan' });
+
+  const cvData = cvRecord.data;
+
+  const { data: existing } = await insforge.database
+    .from('cover_letters')
+    .select('id')
+    .eq('cv_id', cv_id)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (existing) {
+    return res.status(409).json({ error: 'Surat lamaran untuk CV ini sudah ada. Hapus surat yang ada terlebih dahulu jika ingin membuat ulang.', existing_id: existing.id });
   }
 
   const mergedPersonal = {
-    name: personal.name || cvData?.personal?.name || '',
-    email: personal.email || cvData?.personal?.email || '',
-    phone: personal.phone || cvData?.personal?.phone || '',
-    address: personal.address || '',
-    birthPlace: personal.birthPlace || '',
-    birthDate: personal.birthDate || '',
-    gender: personal.gender || '',
-    lastEducation: personal.lastEducation || (cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : ''),
-    portfolio: personal.portfolio || cvData?.personal?.portfolio || '',
+    name: cvData?.personal?.name || '',
+    email: cvData?.personal?.email || '',
+    phone: cvData?.personal?.phone || '',
+    address: cvData?.personal?.address || personal.address || '',
+    birthPlace: cvData?.personal?.birthPlace || personal.birthPlace || '',
+    birthDate: cvData?.personal?.birthDate || personal.birthDate || '',
+    gender: cvData?.personal?.gender || personal.gender || '',
+    lastEducation: cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : '',
+    portfolio: cvData?.personal?.portfolio || '',
   };
 
   const attachmentLabels = buildAttachmentLabels(attachments, custom_attachment);
   const formattedDate = formatIndonesianDate(letter_date);
+
+  const experiences = cvData?.experiences || [];
+  const skills = cvData?.skills || { technical: [], soft: [] };
 
   try {
     const { generateCoverLetter } = await import('../services/aiService.js');
@@ -179,11 +241,21 @@ export async function generateLetter(req, res) {
       relevantExperience: relevant_experience,
     });
 
+    await insforge.database
+      .from('cover_letters')
+      .upsert({
+        user_id: req.user.id,
+        cv_id,
+        position,
+        company,
+        content,
+      }, { onConflict: 'cv_id, user_id', ignoreDuplicates: false });
+
     res.json({
       success: true,
       data: {
         content,
-        cv_id: cv_id || '',
+        cv_id,
         position,
         company,
         companyField: company_field || '',
@@ -194,6 +266,8 @@ export async function generateLetter(req, res) {
         city: city || '',
         date: formattedDate,
         highlights: highlights || [],
+        experiences,
+        skills,
       },
     });
   } catch (err) {

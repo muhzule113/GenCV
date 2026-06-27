@@ -64,7 +64,7 @@ export default function StepExperience({ data, onChange }) {
               <div key={j} className="flex gap-2">
                 <span className="mt-2.5 text-text-muted">•</span>
                 <input
-                  className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-border dark:border-border-dark rounded-lg text-sm text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-border dark:border-border-dark rounded-lg text-body text-text-primary dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={bullet}
                   onChange={(e) => updateBullet(i, j, e.target.value)}
                   placeholder="Deskripsi pencapaian..."

@@ -127,6 +127,30 @@ export async function duplicateCV(req, res) {
   res.status(201).json({ success: true, data });
 }
 
+export async function analyzeJobMatch(req, res) {
+  const { cvData, jobDescription } = req.body;
+
+  if (!jobDescription) {
+    return res.status(400).json({ error: 'Job description is required' });
+  }
+
+  try {
+    const { analyzeJobMatch: analyzeFn } = await import('../services/aiService.js');
+    const raw = await analyzeFn({ cvData: cvData || {}, jobDescription });
+
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      return res.status(500).json({ error: 'AI returned invalid format' });
+    }
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ error: 'AI analysis failed', details: err.message });
+  }
+}
+
 export async function generateSummary(req, res) {
   const { experiences, skills, target_position, targetPosition, tone, language } = req.body;
 

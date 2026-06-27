@@ -17,7 +17,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer'
 import { ATSCleanTemplate } from '../../components/cv/templates/ATSCleanTemplate'
 import { ATSModernTemplate } from '../../components/cv/templates/ATSModernTemplate'
 
-const steps = ['Data Diri', 'Ringkasan', 'Pengalaman', 'Pendidikan', 'Keahlian & Proyek', 'Template & Preview']
+const steps = ['Data Diri', 'Pengalaman', 'Pendidikan', 'Keahlian & Proyek', 'Ringkasan', 'Template & Preview']
 
 export default function CVBuilderPage() {
   const navigate = useNavigate()
@@ -83,10 +83,10 @@ export default function CVBuilderPage() {
 
   const stepComponents = [
     <StepPersonal key="personal" data={cvData} onChange={updateData} />,
-    <StepSummary key="summary" data={cvData} onChange={(f, v) => updateData(f, v)} onGenerate={handleGenerate} generating={generating} />,
     <StepExperience key="exp" data={cvData} onChange={(f, v) => updateData(f, v)} />,
     <StepEducation key="edu" data={cvData} onChange={(f, v) => updateData(f, v)} />,
     <StepSkills key="skills" data={cvData} onChange={(f, v) => updateData(f, v)} />,
+    <StepSummary key="summary" data={cvData} onChange={(f, v) => updateData(f, v)} onGenerate={handleGenerate} generating={generating} />,
     <div key="final" className="space-y-5">
       <div className="flex items-center justify-between">
         <div>

@@ -50,6 +50,12 @@ export default function CoverLetterHTML({ data }) {
         <p>Di {data.company || '[NAMA PERUSAHAAN]'}</p>
       </div>
 
+      <p className="letter-perihal">
+        <span className="letter-perihal-label">Perihal</span>
+        <span className="letter-sep">: </span>
+        <span className="letter-perihal-value">Lamaran Pekerjaan sebagai {(data.position || '').toUpperCase() || '[POSISI]'}</span>
+      </p>
+
       <p className="letter-greeting">Dengan hormat,</p>
 
       <p className="letter-intro">Saya yang bertanda tangan di bawah ini :</p>
@@ -129,11 +135,11 @@ export default function CoverLetterHTML({ data }) {
         ini saya lampirkan dokumen persyaratan sebagai berikut:
       </p>
 
-      <ol className="letter-attachments">
+      <ul className="letter-attachments letter-bulletin">
         {attachments.map((label, i) => (
           <li key={i}>{label}</li>
         ))}
-      </ol>
+      </ul>
 
       {paragraphs.length > 0 && (
         <div className="letter-paragraphs">
