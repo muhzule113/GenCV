@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import useThemeStore from './store/themeStore'
 import useToastStore from './store/toastStore'
 import useAuthStore from './store/authStore'
 import ProtectedRoute from './components/common/ProtectedRoute'
@@ -11,6 +10,7 @@ import RegisterPage from './pages/Auth/RegisterPage'
 import DashboardPage from './pages/Dashboard/DashboardPage'
 import CVBuilderPage from './pages/CVBuilder/CVBuilderPage'
 import LetterBuilderPage from './pages/LetterBuilder/LetterBuilderPage'
+import SharedCVPage from './pages/SharedCV/SharedCVPage'
 
 function ToastContainer() {
   const { toasts, removeToast } = useToastStore()
@@ -24,13 +24,11 @@ function ToastContainer() {
 }
 
 export default function App() {
-  const initTheme = useThemeStore((s) => s.initTheme)
   const bootstrap = useAuthStore((s) => s.bootstrap)
 
   useEffect(() => {
-    initTheme()
     bootstrap()
-  }, [initTheme, bootstrap])
+  }, [bootstrap])
 
   return (
     <BrowserRouter>
@@ -43,6 +41,7 @@ export default function App() {
         <Route path="/cv/:id/edit" element={<ProtectedRoute><CVBuilderPage /></ProtectedRoute>} />
         <Route path="/letter/new" element={<ProtectedRoute><LetterBuilderPage /></ProtectedRoute>} />
         <Route path="/letter/:id/edit" element={<ProtectedRoute><LetterBuilderPage /></ProtectedRoute>} />
+        <Route path="/cv/s/:token" element={<SharedCVPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ToastContainer />
