@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { insforge } from '../config/insforge.js';
 
 export async function listCVs(req, res) {
@@ -8,7 +9,7 @@ export async function listCVs(req, res) {
 
   const { data, error, count } = await insforge.database
     .from('cvs')
-    .select('id, title, template_id, created_at, updated_at', { count: 'exact' })
+    .select('id, title, template_id, share_token, created_at, updated_at', { count: 'exact' })
     .eq('user_id', req.user.id)
     .order('created_at', { ascending: false })
     .range(from, to);
@@ -210,5 +211,78 @@ export async function recommendSkills(req, res) {
     res.json({ success: true, data: { skills: filtered } });
   } catch (err) {
     res.status(500).json({ error: 'AI recommendation failed', details: err.message });
+  }
+}
+
+export async function toggleShare(req, res) {
+  // Check current share state
+  const { data: cv, error: fetchErr } = await insforge.database
+    .from('cvs')
+    .select('id, share_token')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (fetchErr) return res.status(500).json({ error: fetchErr.message });
+  if (!cv) return res.status(404).json({ error: 'CV not found' });
+
+  const newToken = cv.share_token ? null : crypto.randomBytes(16).toString('hex');
+
+  const { data, error } = await insforge.database
+    .from('cvs')
+    .update({ share_token: newToken, updated_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .select('id, share_token')
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({
+    success: true,
+    data: {
+      shared: !!data.share_token,
+      share_token: data.share_token,
+    },
+  });
+}
+
+export async function getSharedCV(req, res) {
+  const { token } = req.params;
+  if (!token || token.length < 16) return res.status(400).json({ error: 'Invalid token' });
+
+  const { data, error } = await insforge.database
+    .from('cvs')
+    .select('title, template_id, data')
+    .eq('share_token', token)
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Shared CV not found or link has been disabled' });
+
+  res.json({ success: true, data });
+}
+
+export async function parseOCRText(req, res) {
+  const { text } = req.body;
+  if (!text || text.trim().length < 20) {
+    return res.status(400).json({ error: 'Teks terlalu pendek untuk di-parse' });
+  }
+
+  try {
+    const { parseOCRTextToCV } = await import('../services/aiService.js');
+    const raw = await parseOCRTextToCV(text.trim());
+
+    let parsed;
+    try {
+      const cleaned = raw.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+      parsed = JSON.parse(cleaned);
+    } catch {
+      return res.status(500).json({ error: 'AI mengembalikan format tidak valid. Coba lagi.' });
+    }
+
+    res.json({ success: true, data: parsed });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal mem-parse teks CV', details: err.message });
   }
 }

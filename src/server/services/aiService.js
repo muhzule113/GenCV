@@ -214,3 +214,53 @@ Target posisi: ${targetPosition}`,
 
   return response.choices[0].message.content;
 }
+
+export async function parseOCRTextToCV(text) {
+  const response = await deepseek.chat.completions.create({
+    model: 'deepseek-chat',
+    messages: [
+      {
+        role: 'system',
+        content: `Kamu adalah parser CV profesional. Tugas: parse teks mentah dari hasil OCR/scan CV menjadi data terstruktur JSON.
+
+FORMAT OUTPUT: Kembalikan HANYA JSON valid tanpa markdown, tanpa tanda bintang, tanpa \`\`\`json. Struktur:
+{
+  "personal": {
+    "name": "", "jobTitle": "", "email": "", "phone": "", "city": "",
+    "linkedin": "", "github": "", "portfolio": ""
+  },
+  "summary": "",
+  "experiences": [
+    { "company": "", "position": "", "start_date": "", "end_date": "", "is_current": false, "description": ["bullet 1", "bullet 2"] }
+  ],
+  "educations": [
+    { "institution": "", "degree": "", "field": "", "start_year": "", "end_year": "", "gpa": "" }
+  ],
+  "skills": { "technical": ["skill1", "skill2"], "soft": ["skill1"] },
+  "projects": [
+    { "name": "", "description": "", "tech_stack": [], "url": "" }
+  ],
+  "certifications": [
+    { "name": "", "issuer": "", "date": "" }
+  ]
+}
+
+ATURAN:
+1. Isi field dengan data yang ada. Kosongkan ("") jika tidak ditemukan di teks.
+2. Untuk tanggal, gunakan format yang ditemukan (e.g. "Jan 2023", "2023", "Januari 2023").
+3. Pisahkan deskripsi pengalaman menjadi array bullet points.
+4. Bedakan technical skills (tools, teknologi, bahasa pemrograman) dan soft skills.
+5. Jika teks berantakan karena OCR, coba interpretasikan sebaik mungkin.
+6. Jangan tambahkan data fiktif. Hanya gunakan apa yang ada di teks.`,
+      },
+      {
+        role: 'user',
+        content: `Teks CV hasil OCR:\n\n${text}`,
+      },
+    ],
+    max_tokens: 2000,
+    temperature: 0.3,
+  });
+
+  return response.choices[0].message.content;
+}
