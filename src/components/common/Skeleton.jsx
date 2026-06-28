@@ -22,7 +22,7 @@ export function PageLoader({ text = 'Memuat...' }) {
  return (
  <div className="flex flex-col items-center justify-center py-20 gap-4">
  <div className="w-8 h-8 border border-ink animate-spin" />
- {text && <p className="text-sm text-muted ">{text}</p>}
+  {text && <p className="text-sm text-muted">{text}</p>}
  </div>
  )
 }

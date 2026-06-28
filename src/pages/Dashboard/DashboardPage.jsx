@@ -183,15 +183,16 @@ export default function DashboardPage() {
  }
 
  return (
- <div className="min-h-screen bg-paper ">
- <Navbar />
- <div className="flex">
- <Sidebar />
- <main className="flex-1 p-5 sm:p-6 lg:p-8 pb-20 md:pb-8">
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
- <div>
- <h1 className="font-display text-display tracking-display text-ink ">Dokumen Saya</h1>
- <p className="text-sm text-muted mt-1">Kelola dan buat CV serta surat lamaran pekerjaan Anda.</p>
+  <div className="min-h-screen bg-paper bg-grid">
+  <Navbar />
+  <div className="flex">
+  <Sidebar />
+  <main className="flex-1 p-5 sm:p-6 lg:p-8 pb-20 md:pb-8">
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+  <div>
+  <span className="font-mono text-[11px] tracking-widest text-clip uppercase">DOKUMEN</span>
+  <h1 className="font-display text-h1 tracking-display text-ink mt-1">Dokumen Saya</h1>
+  <p className="text-sm text-muted mt-1">Kelola dan buat CV serta surat lamaran pekerjaan Anda.</p>
  </div>
  <div className="flex gap-2">
  <Button size="sm" variant="ghost" onClick={() => setOcrOpen(true)}>
@@ -215,40 +216,41 @@ export default function DashboardPage() {
  </div>
  </div>
 
- <div className="flex gap-0.5 mb-6 border-b border-border ">
- {tabs.map((tab) => (
- <button
- key={tab.key}
- onClick={() => setTab(tab.key)}
- className={`px-4 py-2 text-sm transition-colors relative ${
- activeTab === tab.key
- ? 'text-ink '
- : 'text-muted hover:text-ink'
- }`}
- >
- {tab.label}
- <span className="ml-1 text-xs opacity-60">{tab.count}</span>
- {activeTab === tab.key && (
- <span className="absolute bottom-0 left-0 right-0 h-px bg-ink " />
- )}
- </button>
- ))}
- </div>
+  <div className="flex gap-0 mb-8 border-b border-rule">
+  {tabs.map((tab) => (
+  <button
+  key={tab.key}
+  onClick={() => setTab(tab.key)}
+   className={`px-4 py-3 text-xs font-mono tracking-widest uppercase transition-all duration-150 relative ${
+  activeTab === tab.key
+  ? 'text-ink'
+  : 'text-muted hover:text-ink'
+  }`}
+  >
+  {tab.label}
+  <span className={`ml-2 ${activeTab === tab.key ? 'text-clip' : 'text-muted'}`}>{tab.count}</span>
+  {activeTab === tab.key && (
+  <span className="absolute bottom-0 left-0 right-0 h-px bg-clip" />
+  )}
+  </button>
+  ))}
+  </div>
 
- {loading ? (
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border ">
- {[1, 2, 3, 4, 5, 6].map((i) => (
- <DocumentCardSkeleton key={i} />
- ))}
- </div>
- ) : error ? (
- <div className="card p-8 text-center">
- <p className="text-danger mb-4 text-sm">{error}</p>
- <Button onClick={fetchAll}>Coba Lagi</Button>
- </div>
- ) : filteredDocs.length > 0 ? (
- <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border ">
- {filteredDocs.map((doc) => (
+  {loading ? (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {[1, 2, 3, 4, 5, 6].map((i) => (
+  <DocumentCardSkeleton key={i} />
+  ))}
+  </div>
+  ) : error ? (
+  <div className="card p-8 text-center border-border">
+  <span className="font-mono text-[11px] tracking-widest text-danger uppercase">Error</span>
+  <p className="text-muted my-4 text-sm">{error}</p>
+  <Button onClick={fetchAll}>Coba Lagi</Button>
+  </div>
+  ) : filteredDocs.length > 0 ? (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {filteredDocs.map((doc) => (
  <DocumentCard
  key={`${doc.type}-${doc.id}`}
  title={doc.title}
@@ -268,7 +270,7 @@ export default function DashboardPage() {
  ) : (
  <EmptyState
  icon={
- <svg className="w-12 h-12 text-muted " fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg className="w-12 h-12 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
  </svg>
  }
@@ -292,8 +294,8 @@ export default function DashboardPage() {
  </>
  }
  >
- <p className="text-sm text-muted ">
- Apakah Anda yakin ingin menghapus <strong className="text-ink ">{deleteModal?.title}</strong>?
+  <p className="text-sm text-muted">
+  Apakah Anda yakin ingin menghapus <strong className="text-ink">{deleteModal?.title}</strong>?
  Tindakan ini tidak dapat dibatalkan.
  </p>
  </Modal>
@@ -311,9 +313,9 @@ export default function DashboardPage() {
  >
  <div>
  <p className="text-sm text-muted mb-3">
- Link publik untuk <strong className="text-ink ">{shareModal?.title}</strong>:
- </p>
- <div className="flex items-center gap-2 p-3 border border-border ">
+  Link publik untuk <strong className="text-ink">{shareModal?.title}</strong>:
+  </p>
+  <div className="flex items-center gap-2 p-3 border border-border">
  <input
  readOnly
  value={shareModal?.url || ''}
