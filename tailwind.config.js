@@ -14,8 +14,11 @@ export default {
       colors: {
         ink: '#1A1A1A',
         paper: '#FAFAFA',
+        sheet: '#F3F0EB',
         surface: '#FFFFFF',
         border: '#E6E6E6',
+        rule: '#D6D2CC',
+        clip: '#1B6B8F',
         muted: '#888888',
         success: '#16A34A',
         danger: '#DC2626',

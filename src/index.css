@@ -252,6 +252,60 @@
   }
 }
 
+@layer components {
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, #EBE8E3 1px, transparent 1px),
+      linear-gradient(to bottom, #EBE8E3 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: 0 0;
+  }
+
+  .section-divider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 1px;
+    margin: 0 auto;
+    width: 100%;
+    background: #D6D2CC;
+  }
+  .section-divider::after {
+    content: '◆';
+    position: absolute;
+    font-size: 8px;
+    color: #1B6B8F;
+    background: #FAFAFA;
+    padding: 0 10px;
+    line-height: 1;
+  }
+
+  .section-divider-sheet::after {
+    background: #F3F0EB;
+  }
+
+  .section-divider-surface::after {
+    background: #FFFFFF;
+  }
+
+  .staple-divider {
+    border: none;
+    border-top: 1px solid #D6D2CC;
+    position: relative;
+    overflow: visible;
+  }
+  .staple-divider::after {
+    content: '◆';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    color: #1B6B8F;
+  }
+}
+
 @media print {
   .cv-page {
     box-shadow: none;

@@ -17,7 +17,7 @@ export default function Navbar() {
  }
 
  return (
- <nav className="sticky top-0 z-40 bg-paper/90 backdrop-blur-sm border-b border-border ">
+  <nav className="sticky top-0 z-40 bg-surface border-b border-rule">
  <div className="container-page flex items-center justify-between h-14">
  <Link to="/" className="flex items-center gap-2 no-underline">
  <span className="font-display font-bold text-lg tracking-display text-ink ">GenCV</span>
