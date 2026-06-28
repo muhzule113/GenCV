@@ -32,8 +32,7 @@ export default function LandingPage() {
           Isi data diri, biarkan kami urus format dan layout-nya. Hasil CV dan surat lamaran siap kirim, gratis.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-          {!isAuthenticated && <Button size="lg" onClick={() => navigate('/register')}>Mulai Gratis</Button>}
-          <Button variant="ghost" size="lg" onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>{isAuthenticated ? 'Ke Dashboard' : 'Lihat Demo'}</Button>
+          <Button size="lg" onClick={() => navigate(isAuthenticated ? '/dashboard' : '/register')}>{isAuthenticated ? 'Ke Dashboard' : 'Mulai Gratis'}</Button>
         </div>
 
         <div className="mt-16 mx-auto max-w-xl">
