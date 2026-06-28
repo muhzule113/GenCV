@@ -23,8 +23,8 @@ export default function Sidebar() {
  to={item.path}
  className={`flex items-center gap-3 px-3 py-2 text-sm transition-colors
  ${isActive 
- ? 'bg-ink text-paper '
- : 'text-muted hover:text-ink hover:bg-ink/5'
+  ? 'bg-ink text-paper'
+  : 'text-muted hover:text-ink hover:bg-ink/5'
  }
  `}
  >

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
 const typeConfig = {
- cv: { icon: '📄', label: 'CV' },
- letter: { icon: '✉️', label: 'Surat' },
+ cv: { label: 'CV' },
+ letter: { label: 'Surat' },
 }
 
 const menuItems = [
@@ -32,9 +32,9 @@ export default function DocumentCard({ title, type = 'cv', templateName, created
  return (
  <div className="card p-4 group cursor-pointer hover:border-ink transition-colors">
  <div className="flex items-start justify-between mb-3 gap-2">
- <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs border border-border text-muted ">
- {config.icon} {config.label}
- </span>
+  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs border border-border text-muted font-mono">
+  {config.label}
+  </span>
  <div className="relative">
  <button
  type="button"
@@ -80,23 +80,20 @@ export default function DocumentCard({ title, type = 'cv', templateName, created
  </div>
  </div>
 
- <h4 className="font-medium text-sm text-ink mb-1 line-clamp-2">{title}</h4>
- {templateName && (
- <div className="inline-flex items-center gap-1 text-xs text-muted ">
- <span>Template:</span>
- <span className="font-medium">{templateName}</span>
- </div>
- )}
- {shared && (
- <div className="inline-flex items-center gap-1 text-xs text-success mt-1">
- <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
- <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
- <path strokeLinecap="round" strokeLinejoin="round" d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
- </svg>
- Shared
- </div>
- )}
- <p className="text-xs text-muted mt-2">Diperbarui {formatDate(updatedAt)}</p>
+  <h4 className="font-medium text-sm text-ink mb-1 line-clamp-2">{title}</h4>
+  {templateName && (
+  <p className="text-[11px] font-mono text-clip mt-1">{templateName}</p>
+  )}
+  {shared && (
+  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-clip mt-1">
+  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+  <path strokeLinecap="round" strokeLinejoin="round" d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+  </svg>
+  Shared
+  </span>
+  )}
+  <p className="text-xs text-muted mt-3">Diperbarui {formatDate(updatedAt)}</p>
  </div>
  )
 }
