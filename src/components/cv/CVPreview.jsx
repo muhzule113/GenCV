@@ -4,7 +4,7 @@ import ATSModernHTML from './templates/ATSModernHTML'
 
 const ZOOM_STEPS = [0.5, 0.65, 0.8, 0.9, 1, 1.15, 1.3, 1.5]
 
-export default function CVPreview({ data, templateId = 'ats-clean-v1' }) {
+export default function CVPreview({ data, templateId = 'ats-clean-v1', noBorder = false }) {
   const Template = templateId === 'ats-modern-v1' ? ATSModernHTML : ATSCleanHTML
   const containerRef = useRef(null)
   const [zoom, setZoom] = useState(1)
@@ -41,7 +41,7 @@ export default function CVPreview({ data, templateId = 'ats-clean-v1' }) {
   }
 
   return (
-    <div className="flex flex-col border border-border">
+    <div className={`flex flex-col ${noBorder ? '' : 'border border-border'}`}>
       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-surface border-b border-border">
         <div className="flex items-center gap-1.5">
           <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -317,74 +317,89 @@ Digunakan di halaman landing sebagai "kertas milimeter".
 
 Prinsip: **cepat, muncul tegas, hilang langsung** — seperti meletakkan kertas di meja, bukan menjatuhkannya. Tidak ada bounce, spring, atau efek elastis.
 
+### Teknik Utama: Sharp Cut-in + Border Draw
+
+Semua popup/alert/modal menggunakan dua animasi yang berjalan bersamaan:
+
+1. **Sharp Cut-in** — Elemen muncul dari `scaleY(0)` → `scaleY(1)` dari atas ke bawah, seperti kertas yang diletakkan tegas di meja. Cepat (150ms), tanpa bounce.
+2. **Border Draw** — Border hitam (`border-ink`) digambar mengelilingi elemen menggunakan `clip-path: inset()`. Seperti penggaris menarik garis di sekeliling kotak. Sedikit lebih lambat (200ms) untuk memberi kesan presisi.
+
 ### Durasi
 
 | Kategori       | Durasi | Easing         | Penggunaan                    |
 |----------------|--------|----------------|-------------------------------|
 | Micro          | 100ms  | `ease-out`     | Hover warna, border change    |
-| Default        | 150ms  | `ease-out`     | Dropdown, tooltip, fade       |
-| Enter          | 200ms  | `ease-out`     | Modal masuk, toast masuk      |
-| Exit           | 150ms  | `ease-in`      | Modal keluar, toast keluar    |
+| Cut-in (enter) | 150ms  | `ease-out`     | Modal, toast, dropdown masuk  |
+| Cut-out (exit) | 100ms  | `ease-in`      | Modal, toast keluar           |
+| Border draw    | 200ms  | `ease-out`     | Border mengelilingi elemen    |
+| Overlay        | 200ms  | `ease-out`     | Backdrop modal fade in        |
 
-**Aturan:** Enter selalu lebih lambat dari exit. Masuk = perlu dilihat. Keluar = cepat menyingkir.
+**Aturan:** Enter selalu lebih lambat dari exit. Border draw selalu mulai bersamaan atau 50ms setelah cut-in.
+
+### Keyframes
+
+```css
+/* Sharp Cut-in: elemen muncul dari atas (scaleY) */
+@keyframes cutIn {
+  from { opacity: 0; transform: scaleY(0); transform-origin: top; }
+  to   { opacity: 1; transform: scaleY(1); transform-origin: top; }
+}
+@keyframes cutOut {
+  from { opacity: 1; transform: scaleY(1); transform-origin: top; }
+  to   { opacity: 0; transform: scaleY(0); transform-origin: top; }
+}
+
+/* Border Draw: border digambar mengelilingi elemen via clip-path */
+@keyframes borderDraw {
+  0%   { clip-path: inset(0 100% 100% 0); }
+  40%  { clip-path: inset(0 0 100% 0); }
+  70%  { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+
+/* Overlay */
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+```
+
+### Tailwind Animation Tokens
+
+```js
+// tailwind.config.js → theme.extend.animation
+animation: {
+  'cut-in':      'cutIn 150ms ease-out forwards',
+  'cut-out':     'cutOut 100ms ease-in forwards',
+  'border-draw': 'borderDraw 200ms ease-out forwards',
+  'overlay-in':  'overlayFadeIn 200ms ease-out forwards',
+  'toast-in':    'toastCutIn 150ms ease-out forwards, borderDraw 200ms ease-out 50ms forwards',
+}
+```
 
 ### Per Komponen
 
 **Modal**
 ```
-Enter: overlay fade 0→1 (200ms) + kotak scale 0.98→1 opacity 0→1 (200ms)
-Exit:  overlay fade 1→0 (150ms) + kotak opacity 1→0 (150ms)
+Enter: overlay fade (200ms) + panel scaleY 0→1 (150ms) + border draw (200ms)
+Exit:  overlay fade out (150ms) + panel scaleY 1→0 (100ms)
 ```
-```css
-/* Tailwind classes */
-/* Overlay */
-.modal-overlay-enter { @apply animate-[fadeIn_200ms_ease-out_forwards]; }
-.modal-overlay-exit  { @apply animate-[fadeOut_150ms_ease-in_forwards]; }
-
-/* Panel */
-.modal-enter { @apply animate-[modalIn_200ms_ease-out_forwards]; }
-.modal-exit  { @apply animate-[modalOut_150ms_ease-in_forwards]; }
-
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to   { opacity: 1; transform: scale(1); }
-}
-@keyframes modalOut {
-  from { opacity: 1; transform: scale(1); }
-  to   { opacity: 0; transform: scale(0.98); }
-}
-```
+- Overlay: `animate-overlay-in`
+- Panel: `animate-cut-in`
+- Border: elemen `<div>` absolute dengan `border-ink` + `animate-border-draw`
 
 **Toast**
 ```
-Enter: slide dari atas + fade (200ms ease-out)
-Exit:  fade out (150ms ease-in)
+Enter: scaleY 0→1 (150ms) + border draw (200ms, delay 50ms)
+Exit:  fade out via unmount
 ```
-```css
-@keyframes toastIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes toastOut {
-  from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(-8px); }
-}
-```
+- Container: `animate-toast-in`
+- Border: elemen `<div>` absolute dengan `border-ink` + `animate-border-draw`
 
 **Dropdown Menu**
 ```
-Enter: fade + scale-Y dari atas (150ms ease-out)
-Exit:  fade out (100ms ease-in)
-```
-```css
-@keyframes dropIn {
-  from { opacity: 0; transform: scaleY(0.95); transform-origin: top; }
-  to   { opacity: 1; transform: scaleY(1); }
-}
-@keyframes dropOut {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
+Enter: scaleY 0→1 dari atas (150ms) + border draw (200ms)
+Exit:  fade out (100ms)
 ```
 
 **Sidebar (mobile slide)**
@@ -401,6 +416,16 @@ Exit:  slide ke kiri (150ms ease-in)
   from { transform: translateX(0); }
   to   { transform: translateX(-100%); }
 }
+```
+
+### Cara Menambahkan Border Draw ke Komponen
+
+Tambahkan elemen overlay `<div>` di dalam komponen:
+```jsx
+<div className="relative ..."> {/* container utama */}
+  <div className="absolute inset-0 border border-ink pointer-events-none animate-border-draw" />
+  {/* konten */}
+</div>
 ```
 
 ### Transisi Inline (Tailwind)
@@ -422,7 +447,7 @@ Untuk perubahan state sederhana (hover, focus), cukup class Tailwind:
 | Animasi dekoratif (parallax)  | Menambah noise visual                   |
 | `transform: rotate` pada UI  | Kotak tidak berputar di meja gambar     |
 | Animasi saat scroll           | Konten langsung terlihat, tidak perlu reveal |
-
+| `scale()` uniform             | Gunakan `scaleY()` — cut-in, bukan zoom |
 ---
 
 ## Yang TIDAK Boleh Dilakukan
