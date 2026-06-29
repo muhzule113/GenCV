@@ -74,6 +74,7 @@ export default function LetterBuilderPage() {
   const [form, setForm] = useState(buildInitialForm)
   const [pageLoading, setPageLoading] = useState(!!editId)
   const [showPreview, setShowPreview] = useState(false)
+  const [initialSkills, setInitialSkills] = useState(null)
 
   useEffect(() => {
     if (!editId) return
@@ -82,6 +83,7 @@ export default function LetterBuilderPage() {
         const res = await api.get(`/api/letter/${editId}`)
         const d = res.data.data
         setLetter(d)
+        if (d.skills) setInitialSkills(d.skills)
         const p = d.personal || {}
         setForm((prev) => ({
           ...prev,
@@ -166,12 +168,8 @@ export default function LetterBuilderPage() {
             {editId ? 'Edit Surat Lamaran' : 'Buat Surat Lamaran'}
           </h1>
         </div>
-
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-          <div className="lg:w-[40%] xl:w-[40%] card p-4 sm:p-6">
-            <div className="mb-3 sm:mb-4">
-              <SectionLabel>Data Surat</SectionLabel>
-            </div>
+          <div className="lg:w-1/2 lg:shrink-0 card p-4 sm:p-6">
             <LetterForm
               form={form}
               setForm={setForm}
@@ -182,18 +180,16 @@ export default function LetterBuilderPage() {
               hasContent={!!letter}
               existingLetter={existingLetter}
               onViewExisting={handleViewExisting}
+              initialSkills={initialSkills}
             />
           </div>
-          <div className="lg:flex-1">
+          <div className="lg:flex-1 min-w-0">
             <div className="lg:hidden mb-3">
               <Button variant="secondary" className="w-full" onClick={() => setShowPreview(!showPreview)}>
                 {showPreview ? 'Sembunyikan Preview' : 'Lihat Preview Surat'}
               </Button>
             </div>
-            <div className={`${showPreview ? 'block' : 'hidden'} lg:block card p-4 sm:p-6`}>
-              <div className="mb-3 sm:mb-4">
-                <SectionLabel>{existingLetter && !letter ? 'Peringatan' : 'Pratinjau Surat'}</SectionLabel>
-              </div>
+            <div className={`${showPreview ? 'block' : 'hidden'} lg:block`}>
               {existingLetter && !letter ? (
                 <div className="border border-danger p-4 sm:p-6">
                   <svg className="w-8 h-8 sm:w-10 sm:h-10 text-danger mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -208,23 +204,25 @@ export default function LetterBuilderPage() {
                   </div>
                 </div>
               ) : (
-                <LetterEditor
-                  letter={letter}
-                  pdfButton={
-                    letter ? (
-                      <PDFDownloadLink
-                        document={<CoverLetterTemplate data={letter} />}
-                        fileName={fileName}
-                      >
-                        {({ loading: pdfLoading }) => (
-                          <Button size="sm" loading={pdfLoading}>
-                            {pdfLoading ? 'Menyiapkan...' : 'Download PDF'}
-                          </Button>
-                        )}
-                      </PDFDownloadLink>
-                    ) : null
-                  }
-                />
+                <div className="flex flex-col bg-surface border border-border">
+                  <LetterEditor
+                    letter={letter}
+                    pdfButton={
+                      letter ? (
+                        <PDFDownloadLink
+                          document={<CoverLetterTemplate data={letter} />}
+                          fileName={fileName}
+                        >
+                          {({ loading: pdfLoading }) => (
+                            <Button size="sm" loading={pdfLoading}>
+                              {pdfLoading ? 'Menyiapkan...' : 'Download PDF'}
+                            </Button>
+                          )}
+                        </PDFDownloadLink>
+                      ) : null
+                    }
+                  />
+                </div>
               )}
             </div>
           </div>

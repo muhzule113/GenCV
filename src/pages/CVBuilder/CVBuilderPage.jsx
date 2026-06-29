@@ -42,6 +42,7 @@ export default function CVBuilderPage() {
   const [generating, setGenerating] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [templateModal, setTemplateModal] = useState(false)
+  const [showATSModal, setShowATSModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loadingCV, setLoadingCV] = useState(!!editId)
   const [loadError, setLoadError] = useState(null)
@@ -161,13 +162,35 @@ export default function CVBuilderPage() {
             )}
           </div>
 
-          <div className="lg:w-[45%] xl:w-[42%]">
-            <div className="hidden lg:block lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] space-y-4 overflow-y-auto">
-              <SectionLabel>Preview CV</SectionLabel>
-              <CVPreview data={cvData} templateId={templateId} />
-              <ATSScorePanel data={cvData} />
+          <div className="lg:w-[55%] xl:w-[52%]">
+            <div className="hidden lg:block lg:sticky lg:top-6 max-h-[calc(100vh-3rem)]">
+              <div className="flex flex-col bg-surface border border-border h-full max-h-[calc(100vh-3rem)]">
+                <div className="border-b border-border shrink-0">
+                  <button
+                    onClick={() => setShowATSModal(true)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-ink/5 transition-colors text-left group"
+                  >
+                    <svg className="w-4 h-4 text-ink shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span className="font-mono text-[11px] tracking-widest text-clip uppercase">Skor ATS</span>
+                    <span className="ml-auto text-xs text-muted group-hover:text-ink transition-colors">Lihat Detail →</span>
+                  </button>
+                </div>
+                <CVPreview data={cvData} templateId={templateId} noBorder />
+              </div>
             </div>
             <div className="lg:hidden space-y-4">
+              <button
+                onClick={() => setShowATSModal(true)}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-surface border border-border hover:bg-ink/5 transition-colors text-left group"
+              >
+                <svg className="w-4 h-4 text-ink shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span className="font-mono text-[11px] tracking-widest text-clip uppercase">Skor ATS</span>
+                <span className="ml-auto text-xs text-muted group-hover:text-ink transition-colors">Lihat Detail →</span>
+              </button>
               <Button variant="secondary" className="w-full" onClick={() => setShowPreview(!showPreview)}>
                 {showPreview ? 'Sembunyikan Preview' : 'Lihat Preview'}
               </Button>
@@ -176,7 +199,6 @@ export default function CVBuilderPage() {
                   <CVPreview data={cvData} templateId={templateId} />
                 </div>
               )}
-              <ATSScorePanel data={cvData} />
             </div>
           </div>
         </div>
@@ -184,6 +206,9 @@ export default function CVBuilderPage() {
 
       <Modal open={templateModal} onClose={() => setTemplateModal(false)} title="Pilih Template" size="lg">
         <TemplatePicker selected={templateId} onSelect={(id) => { setTemplateId(id); setTemplateModal(false) }} />
+      </Modal>
+      <Modal open={showATSModal} onClose={() => setShowATSModal(false)} title="Skor ATS" size="lg">
+        <ATSScorePanel data={cvData} noCard noPadding />
       </Modal>
     </div>
   )

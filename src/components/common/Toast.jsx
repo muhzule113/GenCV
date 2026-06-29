@@ -25,7 +25,8 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
  }, [duration, onClose])
 
  return (
- <div className="flex items-center gap-3 px-4 py-2.5 bg-surface border border-border text-sm shadow-sm">
+ <div className="flex items-center gap-3 px-4 py-2.5 bg-surface border border-border text-sm shadow-sm animate-toast-in relative">
+  <div className="absolute inset-0 border border-ink pointer-events-none animate-border-draw" />
  {icons[type]}
  <p className="text-ink ">{message}</p>
  <button onClick={onClose} className="text-muted hover:text-ink ml-2">

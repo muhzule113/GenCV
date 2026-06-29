@@ -49,7 +49,7 @@ function ToggleChip({ active, onClick, children }) {
   )
 }
 
-export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, hasContent, existingLetter, onViewExisting }) {
+export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, hasContent, existingLetter, onViewExisting, initialSkills }) {
   const [cvList, setCvList] = useState([])
   const [isLoadingCV, setIsLoadingCV] = useState(false)
   const [infoSourceOther, setInfoSourceOther] = useState('')
@@ -58,6 +58,13 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   const [selectedHighlights, setSelectedHighlights] = useState([])
   const [customHighlight, setCustomHighlight] = useState('')
   const [cvSkills, setCvSkills] = useState(null)
+
+  // Initialize cvSkills from prop (used in edit mode)
+  useEffect(() => {
+    if (initialSkills && !cvSkills) {
+      setCvSkills(initialSkills)
+    }
+  }, [initialSkills])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
 
@@ -197,7 +204,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="border border-ink p-5 bg-paper">
+      <div className="pb-5 border-b-2 border-ink">
         <SectionLabel>AI Cover Letter</SectionLabel>
         <h3 className="font-display text-h3 text-ink mt-1">Data Surat Lamaran</h3>
         <p className="text-sm text-muted mt-1">Pilih CV sebagai dasar pembuatan surat lamaran.</p>
@@ -220,8 +227,8 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       )}
 
       {/* Block A — Data Pelamar */}
-      <div className="card">
-        <div className="px-4 py-3 border-b border-border flex items-start gap-2">
+      <div>
+        <div className="px-0 py-3 border-b border-border flex items-start gap-2">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-8 h-8 shrink-0 bg-ink/10 text-ink flex items-center justify-center">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -238,7 +245,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             <span className="font-mono text-[10px] tracking-wider text-success px-2 py-0.5 border border-success shrink-0">Lengkap</span>
           )}
         </div>
-        <div className="p-4 space-y-4">
+        <div className="pt-4 space-y-4">
           <div>
             <label className="block text-sm text-ink mb-1.5">
               Pilih CV <span className="text-danger">*</span>
@@ -266,7 +273,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
           </div>
 
           {form.personal.name && (
-            <div className="card p-4">
+            <div className="border border-border bg-surface/50 p-4">
               <SectionLabel>Identitas dari CV</SectionLabel>
               <div className="space-y-1.5 mt-2">
                 {identityFields.map((f) => (
@@ -280,7 +287,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
           )}
 
           {cvSkills && (cvSkills.technical.length > 0 || cvSkills.soft.length > 0) && (
-            <div className="card p-4">
+            <div className="border border-border bg-surface/50 p-4">
               <SectionLabel>Keahlian dari CV</SectionLabel>
               <div className="mt-2 space-y-2">
                 {cvSkills.technical.length > 0 && (
@@ -304,8 +311,8 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       </div>
 
       {/* Block B — Data Lamaran */}
-      <div className="card">
-        <div className="px-4 py-3 border-b border-border flex items-start gap-2">
+      <div>
+        <div className="px-0 py-3 border-b border-border flex items-start gap-2">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-8 h-8 shrink-0 bg-ink/10 text-ink flex items-center justify-center">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -322,7 +329,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             <span className="font-mono text-[10px] tracking-wider text-success px-2 py-0.5 border border-success shrink-0">Lengkap</span>
           )}
         </div>
-        <div className="p-4 space-y-4">
+        <div className="pt-4 space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
             <Input label="Nama Perusahaan" required placeholder="contoh: PT Pertamina" value={form.company} onChange={update('company')} />
             <Input label="Divisi / Departemen Tujuan" required placeholder="contoh: HRD, Manajer Rekrutmen" value={form.recipientTitle} onChange={update('recipientTitle')} />
@@ -365,8 +372,8 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       </div>
 
       {/* Block C — Lampiran */}
-      <div className="card">
-        <div className="px-4 py-3 border-b border-border flex items-start gap-2">
+      <div>
+        <div className="px-0 py-3 border-b border-border flex items-start gap-2">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-8 h-8 shrink-0 bg-ink/10 text-ink flex items-center justify-center">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -383,7 +390,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             <span className="font-mono text-[10px] tracking-wider text-success px-2 py-0.5 border border-success shrink-0">Lengkap</span>
           )}
         </div>
-        <div className="p-4 space-y-4">
+        <div className="pt-4 space-y-4">
           <p className="text-xs text-muted">Pilih dokumen yang akan dilampirkan pada surat.</p>
           <div className="grid sm:grid-cols-2 gap-2">
             {attachmentOptions.map((opt) => {
@@ -421,7 +428,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             />
           </div>
           {attachmentsList.length > 0 && (
-            <div className="card p-4">
+            <div className="border border-border bg-surface/50 p-4">
               <SectionLabel>Ringkasan ({attachmentsList.length})</SectionLabel>
               <ol className="space-y-1 mt-2">
                 {attachmentsList.map((label, i) => (
@@ -437,8 +444,8 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       </div>
 
       {/* Block D — Lokasi & Tanggal */}
-      <div className="card">
-        <div className="px-4 py-3 border-b border-border flex items-start gap-2">
+      <div>
+        <div className="px-0 py-3 border-b border-border flex items-start gap-2">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-8 h-8 shrink-0 bg-ink/10 text-ink flex items-center justify-center">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -455,13 +462,14 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             <span className="font-mono text-[10px] tracking-wider text-success px-2 py-0.5 border border-success shrink-0">Lengkap</span>
           )}
         </div>
-        <div className="p-4">
+        <div className="pt-4">
           <div className="grid md:grid-cols-2 gap-4">
             <Input label="Kota Penulisan" required placeholder="contoh: Barru" value={form.city} onChange={update('city')} />
             <DatePicker label="Tanggal Surat" required value={form.letterDate} onChange={update('letterDate')} />
           </div>
         </div>
       </div>
+
 
       {/* Highlights */}
       <div className="card">
@@ -560,7 +568,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       </div>
 
       {/* Sticky Footer */}
-      <div className="sticky bottom-0 px-0 sm:px-0 py-3 bg-surface border-t border-border">
+      <div className="sticky bottom-0 py-3 bg-surface border-t border-border">
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
             onClick={onGenerate}
