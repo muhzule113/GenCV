@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../../components/common/Navbar'
 import Sidebar from '../../components/common/Sidebar'
@@ -14,6 +14,7 @@ import { ATSCleanTemplate } from '../../components/cv/templates/ATSCleanTemplate
 import { ATSModernTemplate } from '../../components/cv/templates/ATSModernTemplate'
 import { CoverLetterTemplate } from '../../components/letter/CoverLetterTemplate'
 import useToastStore from '../../store/toastStore'
+import DashboardRail from './DashboardRail'
 
 export default function DashboardPage() {
  const [searchParams, setSearchParams] = useSearchParams()
@@ -28,6 +29,8 @@ export default function DashboardPage() {
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState(null)
  const addToast = useToastStore((s) => s.addToast)
+  const [cvWordCount, setCvWordCount] = useState(0)
+  const [avgAtsScore, setAvgAtsScore] = useState(null)
 
  const templateNameById = useMemo(() => {
  const map = {}
@@ -59,11 +62,77 @@ export default function DashboardPage() {
  useEffect(() => {
  fetchAll()
  }, [])
+ 
+ useEffect(() => {
+   if (!cvs.length || loading) return
+   const toFetch = cvs.slice(0, Math.min(5, cvs.length))
+   Promise.all(toFetch.map(cv =>
+     api.get(`/api/cv/${cv.id}`).then(r => r.data.data).catch(() => null)
+   )).then(async (details) => {
+     const valid = details.filter(Boolean)
+     if (!valid.length) { setAvgAtsScore(0); return }
+ 
+     // Extract content objects — CV detail stores content in d.data
+     const contents = valid.map(d => {
+       const c = d.data || {}
+       return {
+         personal: c.personal || {},
+         summary: c.summary || '',
+         experiences: c.experiences || c.experience || [],
+         educations: c.educations || c.education || [],
+         skills: c.skills || {},
+       }
+     })
+ 
+     // Word count: sum over text fields
+     const words = contents.reduce((sum, d) => {
+       let count = 0
+       const p = d.personal
+       count += (p.name || '').split(/\s+/).filter(Boolean).length
+       count += (p.jobTitle || '').split(/\s+/).filter(Boolean).length
+       count += (d.summary || '').split(/\s+/).filter(Boolean).length
+       for (const exp of (d.experiences || [])) {
+         count += (exp.position || '').split(/\s+/).filter(Boolean).length
+         count += (exp.company || '').split(/\s+/).filter(Boolean).length
+         for (const desc of (exp.description || [])) {
+           count += desc.split(/\s+/).filter(Boolean).length
+         }
+       }
+       for (const edu of (d.educations || [])) {
+         count += (edu.degree || '').split(/\s+/).filter(Boolean).length
+         count += (edu.institution || '').split(/\s+/).filter(Boolean).length
+       }
+       return sum + count
+     }, 0)
+     setCvWordCount(words)
+ 
+     // Average ATS score
+     const { calculateATSScore } = await import('../../utils/atsRules')
+     const total = contents.reduce((sum, d) => sum + calculateATSScore(d).total, 0)
+     setAvgAtsScore(Math.round(total / contents.length))
+   })
+ }, [cvs, loading])
 
  const setTab = (tab) => {
  if (tab === 'all') setSearchParams({})
  else setSearchParams({ tab })
  }
+
+ const stats = useMemo(() => {
+ const all = [...cvs, ...letters]
+ const oneWeekAgo = new Date(Date.now() - 7 * 86400000)
+ const activeThisWeek = all.filter((d) => new Date(d.updated_at) > oneWeekAgo).length
+ return { total: all.length, totalCv: cvs.length, totalLetter: letters.length, activeThisWeek }
+ }, [cvs, letters])
+ 
+ const templateDistribution = useMemo(() => {
+ const map = {}
+ for (const cv of cvs) {
+   const name = templateNameById[cv.template_id] || 'Unknown'
+   map[name] = (map[name] || 0) + 1
+ }
+ return map
+ }, [cvs, templateNameById])
 
  const docs = useMemo(() => {
  const cvDocs = cvs.map((c) => ({
@@ -97,16 +166,16 @@ export default function DashboardPage() {
  if (activeTab === 'all') return docs
  return docs.filter((d) => d.type === activeTab)
  }, [docs, activeTab])
-
  const tabs = [
- { key: 'all', label: 'Semua', count: cvs.length + letters.length },
- { key: 'cv', label: 'CV', count: cvs.length },
- { key: 'letter', label: 'Surat Lamaran', count: letters.length },
+ { key: 'all', label: 'Semua', count: stats.total },
+ { key: 'cv', label: 'CV', count: stats.totalCv },
+ { key: 'letter', label: 'Surat Lamaran', count: stats.totalLetter },
  ]
 
- const handleEdit = (doc) => {
- navigate(doc.type === 'cv' ? `/cv/${doc.id}/edit` : `/letter/${doc.id}/edit`)
- }
+const handleEdit = (doc) => {
+  navigate(doc.type === 'cv' ? `/cv/${doc.id}/edit` : `/letter/${doc.id}/edit`)
+}
+
 
  const handleDownload = async (doc) => {
  addToast(`Menyiapkan ${doc.type === 'cv' ? 'CV' : 'Surat'}...`, 'info')
@@ -158,6 +227,19 @@ export default function DashboardPage() {
  const message = err.response?.data?.error || 'Gagal mendownload dokumen'
  addToast(message, 'error')
  }
+ }
+ 
+ const handleExportAll = async () => {
+   if (!cvs.length) {
+     addToast('Tidak ada CV untuk diexport', 'info')
+     return
+   }
+   addToast('Menyiapkan ekspor batch...', 'info')
+   for (const doc of cvs) {
+     await handleDownload({ ...doc, type: 'cv' })
+     await new Promise(r => setTimeout(r, 500))
+   }
+   addToast('Ekspor batch selesai', 'success')
  }
 
  const handleDuplicate = async (doc) => {
@@ -221,12 +303,27 @@ export default function DashboardPage() {
  navigate('/cv/new', { state: { ocrData: data } })
  }
 
+ // Keyboard shortcuts — use ref to avoid stale closure on handleExportAll
+ const shortcutRef = useRef({ navigate, handleExportAll })
+ shortcutRef.current = { navigate, handleExportAll }
+ useEffect(() => {
+   const handler = (e) => {
+     if ((!e.ctrlKey && !e.metaKey) || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+     const { navigate, handleExportAll } = shortcutRef.current
+     if (e.key === 'n') { e.preventDefault(); navigate('/cv/new') }
+     if (e.key === 'l') { e.preventDefault(); navigate('/letter/new') }
+     if (e.key === 'e') { e.preventDefault(); handleExportAll() }
+   }
+   window.addEventListener('keydown', handler)
+   return () => window.removeEventListener('keydown', handler)
+ }, [])
  return (
  <div className="min-h-screen bg-paper">
  <Navbar />
  <div className="flex">
  <Sidebar />
- <main className="flex-1 container-page py-6 sm:py-10">
+ <main className="flex-1 px-5 py-6 sm:py-10 bg-grid">
+ <div className="max-w-container">
 
  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
  <div>
@@ -254,6 +351,21 @@ export default function DashboardPage() {
  Buat Surat
  </Button>
  </div>
+ </div>
+
+ {/* Stats bar */}
+ <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+ {[
+ { label: 'Total', value: stats.total },
+ { label: 'CV', value: stats.totalCv },
+ { label: 'Surat', value: stats.totalLetter },
+ { label: 'Minggu Ini', value: stats.activeThisWeek },
+ ].map((s) => (
+ <div key={s.label} className="card p-4">
+ <p className="text-[11px] font-mono tracking-widest text-muted uppercase">{s.label}</p>
+ <p className="text-display font-display text-ink mt-1">{s.value}</p>
+ </div>
+ ))}
  </div>
 
  <div className="flex gap-0 mb-8 border-b border-rule">
@@ -304,6 +416,7 @@ export default function DashboardPage() {
  ))}
  </div>
  ) : (
+ <div>
  <EmptyState
  icon={
  <svg className="w-12 h-12 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -315,8 +428,41 @@ export default function DashboardPage() {
  actionLabel={activeTab === 'letter' ? 'Buat Surat Baru' : 'Buat CV Baru'}
  onAction={() => navigate(activeTab === 'letter' ? '/letter/new' : '/cv/new')}
  />
+
+ {/* Template quick start */}
+ {activeTab !== 'letter' && templates.length > 0 && (
+ <div className="mt-8">
+ <p className="font-mono text-[11px] tracking-widest text-muted uppercase mb-4">MULAI CEPAT — PILIH TEMPLATE</p>
+ <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+ {templates.slice(0, 3).map((tpl) => (
+ <button
+ key={tpl.id}
+ type="button"
+ onClick={() => navigate(`/cv/new?template=${tpl.id}`)}
+ className="card p-5 text-left hover:border-ink transition-all duration-150"
+ >
+ <p className="text-sm font-medium text-ink mb-1">{tpl.name}</p>
+ {tpl.description && (
+ <p className="text-xs text-muted line-clamp-2">{tpl.description}</p>
  )}
+ <span className="inline-block mt-3 text-[11px] font-mono text-clip tracking-widest uppercase">Buat &rarr;</span>
+ </button>
+ ))}
+ </div>
+ </div>
+ )}
+ </div>
+ )}
+ </div>
  </main>
+   <DashboardRail
+     stats={stats}
+     templateDistribution={templateDistribution}
+     cvWordCount={cvWordCount}
+     avgAtsScore={avgAtsScore}
+     onExportAll={handleExportAll}
+   />
+ 
  </div>
 
  <Modal

@@ -38,7 +38,7 @@ export default function Navbar({ onDashboard }) {
  <>
  <Link
    to="/tokens"
-   className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full
+   className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold
      bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 transition-colors"
    title="Sisa token AI"
  >
