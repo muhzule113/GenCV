@@ -55,24 +55,24 @@ export default function StepExperience({ data, onChange }) {
  <MonthPicker label="Tanggal Mulai" value={exp.startDate} onChange={(e) => updateExp(i, 'startDate', e.target.value)} />
  <MonthPicker label="Tanggal Selesai" value={exp.endDate} onChange={(e) => updateExp(i, 'endDate', e.target.value)} disabled={exp.isCurrent} />
  </div>
- <label className="flex items-center gap-2 text-sm text-ink ">
- <input type="checkbox" checked={exp.isCurrent} onChange={(e) => updateExp(i, 'isCurrent', e.target.checked)} className="rounded border-border" />
- Saya masih bekerja di sini
- </label>
- <div className="space-y-2">
- <label className="text-sm font-medium text-ink ">Deskripsi (bullet points)</label>
- {exp.description.map((bullet, j) => (
- <div key={j} className="flex gap-2">
- <span className="mt-2.5 text-muted">•</span>
- <input
- className="flex-1 px-3 py-2 bg-white border border-border rounded-lg text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
- value={bullet}
- onChange={(e) => updateBullet(i, j, e.target.value)}
- placeholder="Deskripsi pencapaian..."
- />
- <button onClick={() => removeBullet(i, j)} className="text-danger text-xs hover:underline">Hapus</button>
- </div>
- ))}
+  <label className="flex items-center gap-2 text-sm text-ink">
+    <input type="checkbox" checked={exp.isCurrent} onChange={(e) => updateExp(i, 'isCurrent', e.target.checked)} className="border border-border text-ink focus:ring-0 bg-transparent w-4 h-4 cursor-pointer accent-ink" />
+    Saya masih bekerja di sini
+  </label>
+  <div className="space-y-2">
+    <label className="text-sm font-medium text-ink">Deskripsi (bullet points)</label>
+    {exp.description.map((bullet, j) => (
+      <div key={j} className="flex gap-2">
+        <span className="mt-2.5 text-muted">•</span>
+        <input
+          className="field flex-1 bg-surface"
+          value={bullet}
+          onChange={(e) => updateBullet(i, j, e.target.value)}
+          placeholder="Deskripsi pencapaian..."
+        />
+        <button onClick={() => removeBullet(i, j)} className="text-danger text-xs hover:underline">Hapus</button>
+      </div>
+    ))}
  <Button variant="ghost" size="sm" onClick={() => addBullet(i)}>+ Tambah bullet</Button>
  </div>
  </div>

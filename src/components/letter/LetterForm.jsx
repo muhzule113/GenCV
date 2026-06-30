@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import DatePicker from '../../components/common/DatePicker'
+import AIActionChip from '../../components/common/AIActionChip'
 import api from '../../services/api'
+import useConfirmStore from '../../store/confirmStore'
 
 const infoSourceOptions = [
   'LinkedIn',
@@ -33,11 +35,10 @@ function ToggleChip({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium border transition-colors duration-150 ${
-        active
-          ? 'bg-ink text-paper border-ink'
-          : 'bg-surface text-ink border-border hover:border-ink'
-      }`}
+      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium border transition-colors duration-150 ${active
+        ? 'bg-ink text-paper border-ink'
+        : 'bg-surface text-ink border-border hover:border-ink'
+        }`}
     >
       {children}
       {active && (
@@ -49,7 +50,8 @@ function ToggleChip({ active, onClick, children }) {
   )
 }
 
-export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, hasContent, existingLetter, onViewExisting, initialSkills }) {
+export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, existingLetter, onViewExisting, initialSkills }) {
+  const requestConfirm = useConfirmStore((s) => s.requestConfirm)
   const [cvList, setCvList] = useState([])
   const [isLoadingCV, setIsLoadingCV] = useState(false)
   const [infoSourceOther, setInfoSourceOther] = useState('')
@@ -58,6 +60,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   const [selectedHighlights, setSelectedHighlights] = useState([])
   const [customHighlight, setCustomHighlight] = useState('')
   const [cvSkills, setCvSkills] = useState(null)
+  const highlightsMounted = useRef(false)
 
   // Initialize cvSkills from prop (used in edit mode)
   useEffect(() => {
@@ -71,7 +74,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   useEffect(() => {
     api.get('/api/cv').then((res) => {
       if (res.data?.success) setCvList(res.data.data || [])
-    }).catch(() => {})
+    }).catch(() => { })
   }, [])
 
   useEffect(() => {
@@ -140,6 +143,12 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   }
 
   useEffect(() => {
+    // Skip initial mount — hanya jalankan saat user benar-benar memilih highlight
+    // Cleanup mereset flag agar React StrictMode double-invoke tidak melewati guard ini
+    if (!highlightsMounted.current) {
+      highlightsMounted.current = true
+      return () => { highlightsMounted.current = false }
+    }
     const h = [...selectedHighlights, customHighlight].filter(Boolean)
     setForm((prev) =>
       JSON.stringify(h) !== JSON.stringify(prev.highlights)
@@ -149,6 +158,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
   }, [selectedHighlights, customHighlight, setForm])
 
   const handleLoadRecommendations = async () => {
+    if (!await requestConfirm('Fitur ini akan menggunakan')) return
     setIsLoadingHighlights(true)
     try {
       const { recommendHighlights } = await import('../../services/aiService')
@@ -398,13 +408,11 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
               return (
                 <label
                   key={opt.key}
-                  className={`flex items-center gap-3 px-3 py-2.5 border cursor-pointer transition-colors duration-150 ${
-                    checked ? 'border-ink bg-ink' : 'border-border hover:border-ink'
-                  }`}
+                  className={`flex items-center gap-3 px-3 py-2.5 border cursor-pointer transition-colors duration-150 ${checked ? 'border-ink bg-ink' : 'border-border hover:border-ink'
+                    }`}
                 >
-                  <div className={`flex-shrink-0 w-5 h-5 border-2 flex items-center justify-center transition-colors ${
-                    checked ? 'bg-paper border-paper' : 'border-border bg-surface'
-                  }`}>
+                  <div className={`flex-shrink-0 w-5 h-5 border-2 flex items-center justify-center transition-colors ${checked ? 'bg-paper border-paper' : 'border-border bg-surface'
+                    }`}>
                     {checked && (
                       <svg className="w-3 h-3 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -474,31 +482,22 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       {/* Highlights */}
       <div className="card">
         <div className="px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-ink/10 text-ink flex items-center justify-center">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-8 h-8 bg-ink/10 text-ink flex items-center justify-center shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
               </svg>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h4 className="font-display text-h3 text-ink leading-tight">Poin yang Ingin Ditonjolkan</h4>
               <p className="text-xs text-muted">Bantu AI menonjolkan keunggulanmu yang paling relevan</p>
             </div>
+            {showRecommendBtn && (
+              <AIActionChip icon="sparkles" label="Rekomendasi AI" onClick={handleLoadRecommendations} loading={isLoadingHighlights} />
+            )}
           </div>
         </div>
         <div className="p-4 space-y-4">
-          {showRecommendBtn && (
-            <div className="border border-dashed border-ink bg-ink/[0.03] p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-ink">Butuh inspirasi?</p>
-                <p className="text-xs text-muted mt-0.5">Minta AI menganalisis posisi & CV untuk rekomendasi poin unggulan.</p>
-              </div>
-              <Button variant="primary" size="sm" onClick={handleLoadRecommendations} loading={isLoadingHighlights} className="shrink-0">
-                {isLoadingHighlights ? 'Menganalisis...' : 'Muat Rekomendasi AI'}
-              </Button>
-            </div>
-          )}
-
           {isLoadingHighlights && (
             <div className="flex items-center gap-3 text-sm text-muted p-4">
               <div className="w-8 h-8 border-2 border-ink" />
@@ -516,15 +515,13 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
                 {recommendedHighlights.map((item) => (
                   <label
                     key={item}
-                    className={`flex items-start gap-3 p-3 border cursor-pointer transition-colors duration-150 ${
-                      selectedHighlights.includes(item)
-                        ? 'border-ink bg-ink'
-                        : 'border-border hover:border-ink'
-                    }`}
+                    className={`flex items-start gap-3 p-3 border cursor-pointer transition-colors duration-150 ${selectedHighlights.includes(item)
+                      ? 'border-ink bg-ink'
+                      : 'border-border hover:border-ink'
+                      }`}
                   >
-                    <div className={`flex-shrink-0 mt-0.5 w-5 h-5 border-2 flex items-center justify-center transition-colors ${
-                      selectedHighlights.includes(item) ? 'bg-paper border-paper' : 'border-border bg-surface'
-                    }`}>
+                    <div className={`flex-shrink-0 mt-0.5 w-5 h-5 border-2 flex items-center justify-center transition-colors ${selectedHighlights.includes(item) ? 'bg-paper border-paper' : 'border-border bg-surface'
+                      }`}>
                       {selectedHighlights.includes(item) && (
                         <svg className="w-3 h-3 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -579,14 +576,12 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
           >
             {loading ? 'AI sedang menulis...' : 'Generate Surat'}
           </Button>
-          {hasContent && (
-            <Button variant="secondary" size="md" onClick={onSaveDraft} loading={saving} className="flex-1 sm:flex-none">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z M17 21v-8H7v8 M7 3v5h8" />
-              </svg>
-              {saving ? 'Menyimpan...' : 'Simpan Draft'}
-            </Button>
-          )}
+          <Button variant="secondary" size="md" onClick={onSaveDraft} loading={saving} disabled={!form.cv_id} className="flex-1 sm:flex-none">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z M17 21v-8H7v8 M7 3v5h8" />
+            </svg>
+            {saving ? 'Menyimpan...' : 'Simpan Draft'}
+          </Button>
         </div>
       </div>
     </div>

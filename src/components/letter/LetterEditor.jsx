@@ -154,7 +154,7 @@ export default function LetterEditor({ letter, pdfButton }) {
             ref={containerRef}
             className="overflow-auto bg-grid p-4 min-h-[250px] max-sm:min-h-[200px]"
           >
-            <div className="cv-scaler" style={{ minHeight: '100%' }}>
+            <div className="cv-scaler" style={{ minHeight: '100%', height: `calc(${297 * zoom}mm + 16px)` }}>
               <div
                 className="cv-page-wrap"
                 style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}

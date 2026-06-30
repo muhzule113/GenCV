@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { flushSync } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import Navbar from '../../components/common/Navbar'
 import Stepper from '../../components/common/Stepper'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
+import UnsavedChangesModal from '../../components/common/UnsavedChangesModal'
 import { PageLoader } from '../../components/common/Skeleton'
 import TemplatePicker from '../../components/cv/TemplatePicker'
 import CVPreview from '../../components/cv/CVPreview'
@@ -15,6 +17,7 @@ import StepEducation from '../../components/cv/CVForm/StepEducation'
 import StepSkills from '../../components/cv/CVForm/StepSkills'
 import useCVStore from '../../store/cvStore'
 import useCV from '../../hooks/useCV'
+import useUnsavedChanges from '../../hooks/useUnsavedChanges'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { ATSCleanTemplate } from '../../components/cv/templates/ATSCleanTemplate'
 import { ATSModernTemplate } from '../../components/cv/templates/ATSModernTemplate'
@@ -37,7 +40,7 @@ function Input({ label, value, onChange, placeholder, type = 'text' }) {
 export default function CVBuilderPage() {
   const navigate = useNavigate()
   const { id: editId } = useParams()
-  const { currentStep, setStep, cvData, updateData, setCvData, templateId, setTemplateId, title, setTitle, reset } = useCVStore()
+  const { currentStep, setStep, cvData, updateData, templateId, setTemplateId, title, setTitle, reset } = useCVStore()
   const { generateSummary, saveDraft, loadCV } = useCV()
   const [generating, setGenerating] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
@@ -46,6 +49,9 @@ export default function CVBuilderPage() {
   const [saving, setSaving] = useState(false)
   const [loadingCV, setLoadingCV] = useState(!!editId)
   const [loadError, setLoadError] = useState(null)
+  const [dirty, setDirty] = useState(false)
+  const { blocked, proceed, reset: clearBlocker } = useUnsavedChanges(dirty)
+  const [showDashboardConfirm, setShowDashboardConfirm] = useState(false)
 
   useEffect(() => {
     if (!editId) {
@@ -83,10 +89,28 @@ export default function CVBuilderPage() {
     setSaving(true)
     const result = await saveDraft(editId)
     setSaving(false)
-    if (result?.id && !editId) {
-      navigate(`/cv/${result.id}/edit`, { replace: true })
+    if (result) {
+      flushSync(() => setDirty(false))
+      navigate('/dashboard')
     }
   }
+
+  const handleQuickSave = useCallback(async () => {
+    setSaving(true)
+    await saveDraft(editId)
+    setSaving(false)
+    setDirty(false)
+    proceed?.()
+  }, [editId, saveDraft, proceed])
+
+  const handleDiscard = useCallback(() => {
+    setDirty(false)
+    proceed?.()
+  }, [proceed])
+
+  const handleCancelNav = useCallback(() => {
+    clearBlocker?.()
+  }, [clearBlocker])
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) setStep(currentStep + 1)
@@ -94,15 +118,24 @@ export default function CVBuilderPage() {
 
   const handlePrev = () => {
     if (currentStep > 0) setStep(currentStep - 1)
-    else navigate('/dashboard')
+    else if (dirty) setShowDashboardConfirm(true)
+    else {
+      flushSync(() => setDirty(false))
+      navigate('/dashboard')
+    }
   }
 
+  const handleCvDataChange = useCallback((field, value) => {
+    setDirty(true)
+    updateData(field, value)
+  }, [updateData])
+
   const stepComponents = [
-    <StepPersonal key="personal" data={cvData} onChange={updateData} />,
-    <StepExperience key="exp" data={cvData} onChange={(f, v) => updateData(f, v)} />,
-    <StepEducation key="edu" data={cvData} onChange={(f, v) => updateData(f, v)} />,
-    <StepSkills key="skills" data={cvData} onChange={(f, v) => updateData(f, v)} />,
-    <StepSummary key="summary" data={cvData} onChange={(f, v) => updateData(f, v)} onGenerate={handleGenerate} generating={generating} />,
+    <StepPersonal key="personal" data={cvData} onChange={handleCvDataChange} />,
+    <StepExperience key="exp" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} />,
+    <StepEducation key="edu" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} />,
+    <StepSkills key="skills" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} />,
+    <StepSummary key="summary" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} onGenerate={handleGenerate} generating={generating} />,
     <div key="final" className="space-y-5">
       <div className="flex items-start sm:items-center justify-between gap-2">
         <div>
@@ -111,19 +144,46 @@ export default function CVBuilderPage() {
         </div>
         <Button variant="secondary" size="sm" onClick={() => setTemplateModal(true)} className="shrink-0">Ganti Template</Button>
       </div>
-      <Input label="Judul CV" placeholder="CV Software Engineer 2026" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <TemplatePicker selected={templateId} onSelect={(id) => { setTemplateId(id); setTemplateModal(false) }} />
+      <Input label="Judul CV" placeholder="CV Software Engineer 2026" value={title} onChange={(e) => { setDirty(true); setTitle(e.target.value) }} />
+      <TemplatePicker selected={templateId} onSelect={(id) => { setDirty(true); setTemplateId(id); setTemplateModal(false) }} />
     </div>,
   ]
 
+  const handleDashboardClick = useCallback(() => {
+    if (dirty) setShowDashboardConfirm(true)
+    else navigate('/dashboard')
+  }, [dirty, navigate])
+
+  const handleDashboardSave = useCallback(async () => {
+    setSaving(true)
+    await saveDraft(editId)
+    setSaving(false)
+    flushSync(() => {
+      setDirty(false)
+      setShowDashboardConfirm(false)
+    })
+    navigate('/dashboard')
+  }, [editId, saveDraft, navigate])
+
+  const handleDashboardDiscard = useCallback(() => {
+    flushSync(() => {
+      setDirty(false)
+      setShowDashboardConfirm(false)
+    })
+    navigate('/dashboard')
+  }, [navigate])
+
+
+  const handleDashboardCancel = useCallback(() => {
+    setShowDashboardConfirm(false)
+  }, [])
+
   return (
     <div className="min-h-screen bg-paper">
-      <Navbar />
+      <Navbar onDashboard={handleDashboardClick} />
       <div className="container-page py-4 sm:py-6">
-        <div className="mb-4 sm:mb-6 overflow-x-auto -mx-5 px-5">
-          <div className="min-w-[640px]">
-            <Stepper steps={steps} currentStep={currentStep} onStepClick={setStep} />
-          </div>
+        <div className="mb-4 sm:mb-6">
+          <Stepper steps={steps} currentStep={currentStep} onStepClick={setStep} />
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
@@ -138,6 +198,11 @@ export default function CVBuilderPage() {
                   <Button variant="ghost" onClick={handlePrev} className="order-2 sm:order-1">
                     {currentStep === 0 ? 'Kembali ke Dashboard' : 'Sebelumnya'}
                   </Button>
+                  {currentStep === steps.length - 1 && (
+                    <Button variant="ghost" onClick={handleDashboardClick} className="order-2 sm:order-1">
+                      Kembali ke Dashboard
+                    </Button>
+                  )}
                   <div className="flex gap-2 sm:gap-3 order-1 sm:order-2">
                     {currentStep === steps.length - 1 ? (
                       <>
@@ -209,6 +274,30 @@ export default function CVBuilderPage() {
       </Modal>
       <Modal open={showATSModal} onClose={() => setShowATSModal(false)} title="Skor ATS" size="lg">
         <ATSScorePanel data={cvData} noCard noPadding />
+      </Modal>
+      <UnsavedChangesModal
+        open={blocked}
+        onSave={handleQuickSave}
+        onDiscard={handleDiscard}
+        onCancel={handleCancelNav}
+        saving={saving}
+      />
+      <Modal
+        open={showDashboardConfirm}
+        onClose={handleDashboardCancel}
+        title="Simpan Perubahan?"
+        size="sm"
+        actions={
+          <>
+            <Button variant="ghost" size="sm" onClick={handleDashboardCancel}>Batal</Button>
+            <Button variant="secondary" size="sm" onClick={handleDashboardDiscard}>Jangan Simpan</Button>
+            <Button size="sm" onClick={handleDashboardSave} loading={saving}>Simpan Draft</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted">
+          Anda memiliki perubahan yang belum disimpan. Apakah Anda ingin menyimpan draft terlebih dahulu?
+        </p>
       </Modal>
     </div>
   )

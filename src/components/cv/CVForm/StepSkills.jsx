@@ -3,11 +3,16 @@ import TagInput from '../../common/TagInput'
 import Input from '../../common/Input'
 import Button from '../../common/Button'
 import Modal from '../../common/Modal'
+import AIActionChip from '../../common/AIActionChip'
 import { recommendSkills } from '../../../services/aiService'
 import useToastStore from '../../../store/toastStore'
+import useAuthStore from '../../../store/authStore'
+import useConfirmStore from '../../../store/confirmStore'
 
-export default function StepSkills({ data, onChange }) {
- const addToast = useToastStore((s) => s.addToast)
+ export default function StepSkills({ data, onChange }) {
+  const addToast = useToastStore((s) => s.addToast)
+  const fetchTokenBalance = useAuthStore((s) => s.fetchTokenBalance)
+  const requestConfirm = useConfirmStore((s) => s.requestConfirm)
  const updateSkills = (field) => (tags) => {
  onChange('skills', { ...data.skills, [field]: tags })
  }
@@ -69,21 +74,23 @@ export default function StepSkills({ data, onChange }) {
  return () => document.removeEventListener('mousedown', onDocClick)
  }, [])
 
- const openAiRecommend = async () => {
- const position = data.personal?.jobTitle?.trim() || ''
- if (!position) {
- addToast('Isi Posisi/Jabatan di step Data Diri dulu untuk dapat rekomendasi.', 'error')
- return
- }
+  const openAiRecommend = async () => {
+  const position = data.personal?.jobTitle?.trim() || ''
+  if (!position) {
+  addToast('Isi Posisi/Jabatan di step Data Diri dulu untuk dapat rekomendasi.', 'error')
+  return
+  }
+  if (!await requestConfirm('Fitur ini akan menggunakan')) return
  setAiModalOpen(true)
  setAiLoading(true)
  setAiSuggestions([])
  setAiSelected(new Set())
  try {
  const existing = data.skills?.technical || []
- const suggestions = await recommendSkills({ position, existingSkills: existing })
- setAiSuggestions(suggestions || [])
- } catch (err) {
+  const suggestions = await recommendSkills({ position, existingSkills: existing })
+  setAiSuggestions(suggestions || [])
+  fetchTokenBalance()
+  } catch (err) {
  addToast(err.message || 'Gagal memuat rekomendasi AI', 'error')
  setAiModalOpen(false)
  } finally {
@@ -128,18 +135,16 @@ export default function StepSkills({ data, onChange }) {
  type="button"
  aria-label="Petunjuk input Keahlian Teknis"
  onClick={() => setOpenHelp(openHelp === 'tech' ? null : 'tech')}
- className="relative inline-flex items-center justify-center w-5 h-5 rounded-full text-ink hover:bg-ink/10 transition-colors"
+ className="relative inline-flex items-center justify-center w-5 h-5 border border-ink text-ink hover:bg-ink/10 transition-colors"
  >
- <span className="absolute inset-0 rounded-full bg-ink/30 animate-ping" aria-hidden="true" />
- <span className="absolute inset-0 rounded-full bg-ink/20 animate-pulse" aria-hidden="true" />
- <svg className="relative w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+ <svg className="relative w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
  <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
  </svg>
  </button>
  {openHelp === 'tech' && (
- <div className="absolute z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 rounded-lg border border-border bg-surface shadow-lg text-xs text-ink space-y-2">
+ <div className="absolute z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 border border-ink bg-surface text-xs text-ink space-y-2">
  <div>
- <strong>Cara input:</strong> Ketik satu keahlian lalu tekan <kbd className="px-1 py-0.5 rounded border border-border bg-border text-[10px]">Enter</kbd> untuk menambah tag. Klik tanda <strong>×</strong> pada tag untuk menghapus.
+ <strong>Cara input:</strong> Ketik satu keahlian lalu tekan <kbd className="px-1 py-0.5 border border-border bg-border text-[10px]">Enter</kbd> untuk menambah tag. Klik tanda <strong>×</strong> pada tag untuk menghapus.
  </div>
  <div>
  Isi <strong>tools / bahasa / framework</strong> yang benar-benar bisa Anda gunakan. Tulis nama resmi, satu item per tag, singkat & konsisten.
@@ -152,7 +157,7 @@ export default function StepSkills({ data, onChange }) {
  key={ex}
  type="button"
  onClick={() => onChange('skills', { ...data.skills, technical: [...(data.skills?.technical || []).filter((s) => s.toLowerCase() !== ex.toLowerCase()), ex] })}
- className="inline-flex items-center px-2 py-0.5 rounded-full border border-border bg-surface text-ink hover:border-ink hover:text-ink transition-colors"
+ className="inline-flex items-center px-2 py-0.5 border border-border bg-surface text-ink hover:border-ink hover:text-ink transition-colors"
  >
  + {ex}
  </button>
@@ -162,12 +167,7 @@ export default function StepSkills({ data, onChange }) {
  </div>
  )}
  </div>
- <Button type="button" variant="outline" size="sm" onClick={openAiRecommend}>
- <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
- <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
- </svg>
- Rekomendasi AI
- </Button>
+  <AIActionChip icon="brain" label="Rekomendasi AI" onClick={openAiRecommend} />
  </div>
  <TagInput tags={data.skills.technical} onChange={updateSkills('technical')} placeholder="React.js, Node.js, ..." />
  </div>
@@ -179,18 +179,16 @@ export default function StepSkills({ data, onChange }) {
  type="button"
  aria-label="Petunjuk input Interpersonal"
  onClick={() => setOpenHelp(openHelp === 'soft' ? null : 'soft')}
- className="relative inline-flex items-center justify-center w-5 h-5 rounded-full text-ink hover:bg-ink/10 transition-colors"
+ className="relative inline-flex items-center justify-center w-5 h-5 border border-ink text-ink hover:bg-ink/10 transition-colors"
  >
- <span className="absolute inset-0 rounded-full bg-ink/30 animate-ping" aria-hidden="true" />
- <span className="absolute inset-0 rounded-full bg-ink/20 animate-pulse" aria-hidden="true" />
- <svg className="relative w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+ <svg className="relative w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
  <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
  </svg>
  </button>
  {openHelp === 'soft' && (
- <div className="absolute z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 rounded-lg border border-border bg-surface shadow-lg text-xs text-ink space-y-2">
+ <div className="absolute z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 border border-ink bg-surface text-xs text-ink space-y-2">
  <div>
- <strong>Cara input:</strong> Ketik satu skill lalu tekan <kbd className="px-1 py-0.5 rounded border border-border bg-border text-[10px]">Enter</kbd> untuk menambah tag. Klik tanda <strong>×</strong> pada tag untuk menghapus.
+ <strong>Cara input:</strong> Ketik satu skill lalu tekan <kbd className="px-1 py-0.5 border border-border bg-border text-[10px]">Enter</kbd> untuk menambah tag. Klik tanda <strong>×</strong> pada tag untuk menghapus.
  </div>
  <div>
  Isi <strong>sikap & cara kerja</strong> yang relevan dengan posisi target. Hindari generic seperti &ldquo;rajin&rdquo;; pilih skill yang bisa dibuktikan lewat pengalaman.
@@ -203,7 +201,7 @@ export default function StepSkills({ data, onChange }) {
  key={ex}
  type="button"
  onClick={() => onChange('skills', { ...data.skills, soft: [...(data.skills?.soft || []).filter((s) => s.toLowerCase() !== ex.toLowerCase()), ex] })}
- className="inline-flex items-center px-2 py-0.5 rounded-full border border-border bg-surface text-ink hover:border-ink hover:text-ink transition-colors"
+ className="inline-flex items-center px-2 py-0.5 border border-border bg-surface text-ink hover:border-ink hover:text-ink transition-colors"
  >
  + {ex}
  </button>
@@ -224,7 +222,7 @@ export default function StepSkills({ data, onChange }) {
  </div>
 
  {(data.languages || []).map((lang, i) => (
- <div key={i} className="card border border-border rounded-lg p-5 space-y-4">
+ <div key={i} className="card p-5 space-y-4">
  <div className="flex items-center justify-between">
  <span className="text-sm font-medium text-ink ">Bahasa #{i + 1}</span>
  <button onClick={() => removeLang(i)} className="text-xs text-danger hover:underline">Hapus</button>
@@ -245,7 +243,7 @@ export default function StepSkills({ data, onChange }) {
  </div>
 
  {data.projects.map((proj, i) => (
- <div key={i} className="card border border-border rounded-lg p-5 space-y-4">
+ <div key={i} className="card p-5 space-y-4">
  <div className="flex items-center justify-between">
  <span className="text-sm font-medium text-ink ">Proyek #{i + 1}</span>
  <button onClick={() => removeProject(i)} className="text-xs text-danger hover:underline">Hapus</button>
@@ -262,18 +260,16 @@ export default function StepSkills({ data, onChange }) {
  type="button"
  aria-label="Petunjuk input Tech Stack"
  onClick={() => setOpenHelp(openHelp === `techProj-${i}` ? null : `techProj-${i}`)}
- className="relative inline-flex items-center justify-center w-5 h-5 rounded-full text-ink hover:bg-ink/10 transition-colors"
+ className="relative inline-flex items-center justify-center w-5 h-5 border border-ink text-ink hover:bg-ink/10 transition-colors"
  >
- <span className="absolute inset-0 rounded-full bg-ink/30 animate-ping" aria-hidden="true" />
- <span className="absolute inset-0 rounded-full bg-ink/20 animate-pulse" aria-hidden="true" />
- <svg className="relative w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+ <svg className="relative w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
  <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
  </svg>
  </button>
  {openHelp === `techProj-${i}` && (
- <div className="absolute z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 rounded-lg border border-border bg-surface shadow-lg text-xs text-ink space-y-2">
+ <div className="absolute z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 border border-ink bg-surface text-xs text-ink space-y-2">
  <div>
- <strong>Cara input:</strong> Ketik satu teknologi lalu tekan <kbd className="px-1 py-0.5 rounded border border-border bg-border text-[10px]">Enter</kbd> untuk menambah tag. Klik tanda <strong>×</strong> pada tag untuk menghapus.
+ <strong>Cara input:</strong> Ketik satu teknologi lalu tekan <kbd className="px-1 py-0.5 border border-border bg-border text-[10px]">Enter</kbd> untuk menambah tag. Klik tanda <strong>×</strong> pada tag untuk menghapus.
  </div>
  <div>
  Isi <strong>teknologi utama</strong> yang dipakai di proyek ini (framework, bahasa, database, tool). Tulis nama resmi, singkat & konsisten (mis. <em>React.js</em> bukan <em>react js programming</em>).
@@ -291,7 +287,7 @@ export default function StepSkills({ data, onChange }) {
  updateProject(i, 'techStack', [...list, ex])
  }
  }}
- className="inline-flex items-center px-2 py-0.5 rounded-full border border-border bg-surface text-ink hover:border-ink hover:text-ink transition-colors"
+ className="inline-flex items-center px-2 py-0.5 border border-border bg-surface text-ink hover:border-ink hover:text-ink transition-colors"
  >
  + {ex}
  </button>
@@ -315,7 +311,7 @@ export default function StepSkills({ data, onChange }) {
  </div>
 
  {(data.certifications || []).map((cert, i) => (
- <div key={i} className="card border border-border rounded-lg p-5 space-y-4">
+ <div key={i} className="card p-5 space-y-4">
  <div className="flex items-center justify-between">
  <span className="text-sm font-medium text-ink ">Sertifikasi #{i + 1}</span>
  <button onClick={() => removeCert(i)} className="text-xs text-danger hover:underline">Hapus</button>
@@ -363,10 +359,10 @@ export default function StepSkills({ data, onChange }) {
  key={skill}
  type="button"
  onClick={() => toggleAiSelected(skill)}
- className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-colors ${
+ className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border transition-colors ${
  selected
- ? 'bg-ink text-white border-ink '
- : 'bg-surface text-ink border-border hover:border-ink hover:text-ink'
+ ? 'bg-ink text-white border-ink'
+ : 'bg-surface text-ink border-border hover:border-ink'
  }`}
  >
  {selected && (

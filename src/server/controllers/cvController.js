@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { insforge } from '../config/insforge.js';
+import { refundToken } from '../middleware/tokenMiddleware.js';
 
 export async function listCVs(req, res) {
   const page = Number(req.query.page) || 1;
@@ -85,17 +86,21 @@ export async function updateCV(req, res) {
 }
 
 export async function deleteCV(req, res) {
-  const { data, error } = await insforge.database
+  const { data: existing } = await insforge.database
     .from('cvs')
-    .delete()
+    .select('id')
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
-    .select()
-    .single();
+    .maybeSingle();
+
+  if (!existing) return res.status(404).json({ error: 'CV not found' });
+
+  const { error } = await insforge.database
+    .from('cvs')
+    .delete()
+    .eq('id', req.params.id);
 
   if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: 'CV not found' });
-
   res.json({ success: true, message: 'CV deleted' });
 }
 
@@ -138,16 +143,16 @@ export async function analyzeJobMatch(req, res) {
   try {
     const { analyzeJobMatch: analyzeFn } = await import('../services/aiService.js');
     const raw = await analyzeFn({ cvData: cvData || {}, jobDescription });
-
     let result;
     try {
       result = JSON.parse(raw);
     } catch {
+      await refundToken(req);
       return res.status(500).json({ error: 'AI returned invalid format' });
     }
-
-    res.json({ success: true, data: result });
+    res.json({ success: true, data: result, tokenBalance: req.tokenBalance });
   } catch (err) {
+    await refundToken(req);
     res.status(500).json({ error: 'AI analysis failed', details: err.message });
   }
 }
@@ -164,9 +169,9 @@ export async function generateSummary(req, res) {
       tone: tone || 'profesional',
       language: language || 'id',
     });
-
-    res.json({ success: true, data: { summary } });
+    res.json({ success: true, data: { summary }, tokenBalance: req.tokenBalance });
   } catch (err) {
+    await refundToken(req);
     res.status(500).json({ error: 'AI generation failed', details: err.message });
   }
 }
@@ -208,8 +213,9 @@ export async function recommendSkills(req, res) {
       ? skills.filter((s) => !existingSkills.some((e) => e.toLowerCase() === s.toLowerCase()))
       : skills;
 
-    res.json({ success: true, data: { skills: filtered } });
+    res.json({ success: true, data: { skills: filtered }, tokenBalance: req.tokenBalance });
   } catch (err) {
+    await refundToken(req);
     res.status(500).json({ error: 'AI recommendation failed', details: err.message });
   }
 }
@@ -278,11 +284,12 @@ export async function parseOCRText(req, res) {
       const cleaned = raw.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
       parsed = JSON.parse(cleaned);
     } catch {
+      await refundToken(req);
       return res.status(500).json({ error: 'AI mengembalikan format tidak valid. Coba lagi.' });
     }
-
-    res.json({ success: true, data: parsed });
+    res.json({ success: true, data: parsed, tokenBalance: req.tokenBalance });
   } catch (err) {
+    await refundToken(req);
     res.status(500).json({ error: 'Gagal mem-parse teks CV', details: err.message });
   }
 }

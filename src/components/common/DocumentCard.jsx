@@ -30,11 +30,11 @@ export default function DocumentCard({ title, type = 'cv', templateName, created
  }
 
  return (
- <div className="card p-4 group cursor-pointer hover:border-ink transition-colors">
+  <div className={`card p-4 group cursor-pointer transition-all duration-150 border-2 ${type === 'cv' ? 'border-clip/50 hover:border-clip' : 'border-ink/40 hover:border-ink'}`}>
  <div className="flex items-start justify-between mb-3 gap-2">
-  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs border border-border text-muted font-mono">
-  {config.label}
-  </span>
+   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs border font-mono ${type === 'cv' ? 'border-clip/40 text-clip' : 'border-ink/40 text-ink'}`}>
+   {config.label}
+   </span>
  <div className="relative">
  <button
  type="button"

@@ -87,7 +87,7 @@ export default function CVPreview({ data, templateId = 'ats-clean-v1', noBorder 
         className="overflow-auto bg-grid"
         style={{ minHeight: '400px' }}
       >
-        <div className="cv-scaler" style={{ minHeight: '100%' }}>
+        <div className="cv-scaler" style={{ minHeight: '100%', height: `calc(${297 * zoom}mm + 16px)` }}>
           <div
             className="cv-page-wrap"
             style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}

@@ -4,8 +4,8 @@ const startTime = Date.now();
 const cp = spawn('npx', ['-y', '@insforge/mcp@latest'], {
   env: {
     ...process.env,
-    API_KEY: 'INSFORGE_SERVICE_KEY_PLACEHOLDER',
-    API_BASE_URL: 'https://INSFORGE_HOST_PLACEHOLDER'
+    API_KEY: 'ik_4d3ca6e45067abcb06306c8edd48025f',
+    API_BASE_URL: 'https://d5n38n23.ap-southeast.insforge.app'
   },
   stdio: ['pipe', 'pipe', 'pipe'],
   shell: true
@@ -24,7 +24,7 @@ setTimeout(() => {
     params: {
       name: 'run-raw-sql',
       arguments: {
-        apiKey: 'INSFORGE_SERVICE_KEY_PLACEHOLDER',
+        apiKey: 'ik_4d3ca6e45067abcb06306c8edd48025f',
         query: `
 CREATE TABLE IF NOT EXISTS cvs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

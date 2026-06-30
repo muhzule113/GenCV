@@ -1,5 +1,5 @@
 import { insforge } from '../config/insforge.js';
-
+import { refundToken } from '../middleware/tokenMiddleware.js';
 export async function listLetters(req, res) {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -127,17 +127,21 @@ export async function updateLetter(req, res) {
 }
 
 export async function deleteLetter(req, res) {
-  const { data, error } = await insforge.database
+  const { data: existing } = await insforge.database
     .from('cover_letters')
-    .delete()
+    .select('id')
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
-    .select()
-    .single();
+    .maybeSingle();
+
+  if (!existing) return res.status(404).json({ error: 'Cover letter not found' });
+
+  const { error } = await insforge.database
+    .from('cover_letters')
+    .delete()
+    .eq('id', req.params.id);
 
   if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: 'Cover letter not found' });
-
   res.json({ success: true, message: 'Cover letter deleted' });
 }
 
@@ -268,9 +272,9 @@ export async function generateLetter(req, res) {
         highlights: highlights || [],
         experiences,
         skills,
-      },
-    });
+    }, tokenBalance: req.tokenBalance });
   } catch (err) {
+    await refundToken(req);
     res.status(500).json({ error: 'AI generation failed', details: err.message });
   }
 }
@@ -310,8 +314,9 @@ export async function recommendHighlights(req, res) {
       highlights = key ? fallbackMap[key] : ['Pengalaman relevan di bidang terkait', 'Kemampuan belajar cepat', 'Komitmen terhadap target', 'Komunikasi efektif', 'Integritas dan etos kerja tinggi'];
     }
 
-    res.json({ success: true, data: { highlights } });
+    res.json({ success: true, data: { highlights }, tokenBalance: req.tokenBalance });
   } catch (err) {
+    await refundToken(req);
     res.status(500).json({ error: 'AI recommendation failed', details: err.message });
   }
 }

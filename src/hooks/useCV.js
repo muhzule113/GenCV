@@ -1,10 +1,12 @@
 import { useCallback } from 'react'
 import useCVStore from '../store/cvStore'
 import useToastStore from '../store/toastStore'
+import useAuthStore from '../store/authStore'
 import api from '../services/api'
 
 export default function useCV() {
   const addToast = useToastStore((s) => s.addToast)
+  const fetchTokenBalance = useAuthStore((s) => s.fetchTokenBalance)
   const { cvData, setCvData, setTitle, templateId, title, reset } = useCVStore()
 
   const generateSummary = useCallback(async ({ targetPosition, tone, language } = {}) => {
@@ -19,6 +21,7 @@ export default function useCV() {
       })
       const summary = response.data.data.summary
       setCvData({ ...cvData, summary })
+      fetchTokenBalance()
       addToast('Ringkasan profil berhasil digenerate!', 'success')
       return summary
     } catch (err) {
@@ -89,6 +92,7 @@ export default function useCV() {
         cvData,
         jobDescription,
       })
+      fetchTokenBalance()
       addToast('Analisis lowongan berhasil!', 'success')
       return response.data.data
     } catch (err) {

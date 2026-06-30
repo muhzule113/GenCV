@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import useToastStore from '../store/toastStore'
+import useAuthStore from '../store/authStore'
 import api from '../services/api'
 
 export default function useLetter() {
@@ -7,6 +8,7 @@ export default function useLetter() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [existingLetter, setExistingLetter] = useState(null)
+  const fetchTokenBalance = useAuthStore((s) => s.fetchTokenBalance)
   const addToast = useToastStore((s) => s.addToast)
 
   const checkExistingLetter = useCallback(async (cvId) => {
@@ -50,6 +52,7 @@ export default function useLetter() {
       const data = response.data.data
       setLetter(data)
       setExistingLetter({ id: data.cv_id })
+      fetchTokenBalance()
       addToast('Surat lamaran berhasil digenerate!', 'success')
       return data
     } catch (err) {
@@ -74,20 +77,33 @@ export default function useLetter() {
     setExistingLetter(null)
   }, [])
 
-  const saveLetter = useCallback(async () => {
-    if (!letter) return
+  const saveLetter = useCallback(async (formData, { silent = false } = {}) => {
+    const data = formData || letter
+    if (!data) return
     setSaving(true)
     try {
       await api.post('/api/letter', {
-        cv_id: letter.cv_id,
-        position: letter.position,
-        company: letter.company,
-        content: letter.content || '',
+        cv_id: data.cv_id,
+        position: data.position,
+        company: data.company,
+        company_field: data.companyField || '',
+        info_source: data.infoSource || '',
+        recipient_title: data.recipientTitle || 'HRD',
+        city: data.city || '',
+        letter_date: data.letterDate || '',
+        relevant_experience: data.relevantExperience || '',
+        highlights: data.highlights || [],
+        attachments: data.attachments || [],
+        custom_attachment: data.customAttachment || '',
+        personal: data.personal || {},
+        content: letter?.content || '',
       })
-      addToast('Surat berhasil disimpan!', 'success')
+      if (!silent) addToast('Surat Berhasil Disimpan', 'success')
+      return true
     } catch (err) {
       const message = err.response?.data?.error || 'Gagal menyimpan surat'
       addToast(message, 'error')
+      return false
     } finally {
       setSaving(false)
     }

@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
 import useToastStore from './store/toastStore'
 import useAuthStore from './store/authStore'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import Toast from './components/common/Toast'
+import ConfirmDialogProvider from './components/common/ConfirmDialogProvider'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/Auth/LoginPage'
 import RegisterPage from './pages/Auth/RegisterPage'
@@ -11,6 +12,7 @@ import DashboardPage from './pages/Dashboard/DashboardPage'
 import CVBuilderPage from './pages/CVBuilder/CVBuilderPage'
 import LetterBuilderPage from './pages/LetterBuilder/LetterBuilderPage'
 import SharedCVPage from './pages/SharedCV/SharedCVPage'
+import TokensPage from './pages/Tokens/TokensPage'
 
 function ToastContainer() {
   const { toasts, removeToast } = useToastStore()
@@ -23,28 +25,43 @@ function ToastContainer() {
   )
 }
 
-export default function App() {
+function AppLayout() {
   const bootstrap = useAuthStore((s) => s.bootstrap)
+  const stopPolling = useAuthStore((s) => s.stopPolling)
 
   useEffect(() => {
     bootstrap()
-  }, [bootstrap])
+    return () => stopPolling()
+  }, [bootstrap, stopPolling])
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/cv/new" element={<ProtectedRoute><CVBuilderPage /></ProtectedRoute>} />
-        <Route path="/cv/:id/edit" element={<ProtectedRoute><CVBuilderPage /></ProtectedRoute>} />
-        <Route path="/letter/new" element={<ProtectedRoute><LetterBuilderPage /></ProtectedRoute>} />
-        <Route path="/letter/:id/edit" element={<ProtectedRoute><LetterBuilderPage /></ProtectedRoute>} />
-        <Route path="/cv/s/:token" element={<SharedCVPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+    <>
+      <Outlet />
       <ToastContainer />
-    </BrowserRouter>
+      <ConfirmDialogProvider />
+    </>
   )
+}
+
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { path: '/', element: <LandingPage /> },
+      { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
+      { path: '/dashboard', element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
+      { path: '/cv/new', element: <ProtectedRoute><CVBuilderPage /></ProtectedRoute> },
+      { path: '/cv/:id/edit', element: <ProtectedRoute><CVBuilderPage /></ProtectedRoute> },
+      { path: '/letter/new', element: <ProtectedRoute><LetterBuilderPage /></ProtectedRoute> },
+      { path: '/letter/:id/edit', element: <ProtectedRoute><LetterBuilderPage /></ProtectedRoute> },
+      { path: '/tokens', element: <ProtectedRoute><TokensPage /></ProtectedRoute> },
+      { path: '/cv/s/:token', element: <SharedCVPage /> },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+])
+
+export default function App() {
+  return <RouterProvider router={router} />
 }

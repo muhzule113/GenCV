@@ -105,14 +105,14 @@ export default function DashboardPage() {
  ]
 
  const handleEdit = (doc) => {
- navigate(doc.type === 'cv' ? `/cv/${doc.id}/edit` : `/letter/${doc.id}/edit`)
+ navigate(doc.type === 'cv' ? /cv//edit : /letter//edit)
  }
 
  const handleDownload = async (doc) => {
- addToast(`Menyiapkan ${doc.type === 'cv' ? 'CV' : 'Surat'}...`, 'info')
+ addToast(Menyiapkan ..., 'info')
  try {
  if (doc.type === 'cv') {
- const res = await api.get(`/api/cv/${doc.id}`)
+ const res = await api.get(/api/cv/)
  const cv = res.data.data
  const cvData = cv.data || {}
  const templateId = cv.template_id || 'ats-clean-v1'
@@ -125,12 +125,12 @@ export default function DashboardPage() {
  const url = URL.createObjectURL(blob)
  const a = document.createElement('a')
  a.href = url
- a.download = `${cvData.personal?.name?.replace(/\s+/g, '-') || 'CV'}-CV.pdf`
+ a.download = -CV.pdf
  a.click()
  URL.revokeObjectURL(url)
  addToast('CV berhasil di-download!', 'success')
  } else {
- const res = await api.get(`/api/letter/${doc.id}`)
+ const res = await api.get(/api/letter/)
  const letter = res.data.data
  const letterData = {
  ...letter,
@@ -149,7 +149,7 @@ export default function DashboardPage() {
 
  const a = document.createElement('a')
  a.href = url
- a.download = `Surat_Lamaran_${name}_${company}.pdf`
+ a.download = Surat_Lamaran__.pdf_.pdf
  a.click()
  URL.revokeObjectURL(url)
  addToast('Surat berhasil di-download!', 'success')
@@ -163,7 +163,7 @@ export default function DashboardPage() {
  const handleDuplicate = async (doc) => {
  try {
  if (doc.type === 'cv') {
- await api.post(`/api/cv/${doc.id}/duplicate`, {})
+ await api.post(/api/cv//duplicate, {})
  addToast('CV berhasil diduplikasi', 'success')
  } else {
  addToast('Duplikasi surat tidak didukung; buat surat baru dari CV', 'info')
@@ -181,9 +181,9 @@ export default function DashboardPage() {
  setDeleteModal(null)
  try {
  if (doc.type === 'cv') {
- await api.delete("/api/cv/" + doc.id)
+ await api.delete(/api/cv/)
  } else {
- await api.delete("/api/letter/" + doc.id)
+ await api.delete(/api/letter/)
  }
  addToast('Dokumen berhasil dihapus', 'success')
  await fetchAll()
@@ -195,10 +195,10 @@ export default function DashboardPage() {
 
  const handleShare = async (doc) => {
  try {
- const res = await api.post(`/api/cv/${doc.id}/share`)
+ const res = await api.post(/api/cv//share)
  const { shared, share_token } = res.data.data
  if (shared) {
-      const shareUrl = `${window.location.origin}/cv/s/${share_token}`
+ const shareUrl = /cv/s/
  setShareModal({ title: doc.title, url: shareUrl })
  } else {
  addToast('Link sharing dinonaktifkan', 'success')
@@ -261,10 +261,10 @@ export default function DashboardPage() {
  <button
  key={tab.key}
  onClick={() => setTab(tab.key)}
- className={`px-4 py-3 text-xs font-mono tracking-widest uppercase transition-all duration-150 relative ${activeTab === tab.key ? "text-ink" : "text-muted hover:text-ink"}`}
+ className={px-4 py-3 text-xs font-mono tracking-widest uppercase transition-all duration-150 relative }
  >
  {tab.label}
-          <span className={"ml-2 " + (activeTab === tab.key ? "text-clip" : "text-muted")}>{tab.count}</span>
+ <span className={ml-2 }>{tab.count}</span>
  {activeTab === tab.key && (
  <span className="absolute bottom-0 left-0 right-0 h-px bg-clip" />
  )}
@@ -288,15 +288,15 @@ export default function DashboardPage() {
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
  {filteredDocs.map((doc) => (
  <DocumentCard
-  key={doc.id}
-  title={doc.title}
-  type={doc.type}
-  templateName={doc.templateName}
-  shared={!!doc.share_token}
-  createdAt={doc.created_at}
-  updatedAt={doc.updated_at}
-  onEdit={() => handleEdit(doc)}
-  onDownload={() => handleDownload(doc)}
+ key={-}
+ title={doc.title}
+ type={doc.type}
+ templateName={doc.templateName}
+ shared={!!doc.share_token}
+ createdAt={doc.created_at}
+ updatedAt={doc.updated_at}
+ onEdit={() => handleEdit(doc)}
+ onDownload={() => handleDownload(doc)}
  onDuplicate={() => handleDuplicate(doc)}
  onDelete={() => setDeleteModal(doc)}
  onShare={() => handleShare(doc)}

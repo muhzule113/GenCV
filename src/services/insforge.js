@@ -1,4 +1,4 @@
-const baseUrl = import.meta.env.VITE_INSFORGE_URL || 'https://INSFORGE_HOST_PLACEHOLDER'
+const baseUrl = import.meta.env.VITE_INSFORGE_URL || 'https://d5n38n23.ap-southeast.insforge.app'
 const anonKey = import.meta.env.VITE_INSFORGE_ANON_KEY || ''
 
 async function apiPost(path, body) {
@@ -12,8 +12,9 @@ async function apiPost(path, body) {
   })
   const data = await res.json()
   if (!res.ok) {
-    const msg = data?.error || data?.message || 'Request failed'
-    return { data: null, error: { message: msg } }
+    const rawMsg = typeof data?.error === 'string' ? data.error : (data?.error?.message || data?.message || '')
+    const msg = typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg)
+    return { data: null, error: { message: msg || 'Request failed', code: data?.code || data?.error?.code } }
   }
   return { data, error: null }
 }
@@ -45,7 +46,10 @@ export const insforge = {
       const token = localStorage.getItem('access_token')
       if (!token) return { data: { user: null }, error: { message: 'No token' } }
       const res = await fetch(`${baseUrl}/api/auth/sessions/current`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: anonKey,
+        },
       })
       if (!res.ok) return { data: { user: null }, error: { message: 'Failed to get user' } }
       const data = await res.json()

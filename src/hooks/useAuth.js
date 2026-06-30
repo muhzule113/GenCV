@@ -11,12 +11,21 @@ export default function useAuth() {
 
   const signIn = useCallback(async (email, password) => {
     const { data, error } = await insforge.auth.signInWithPassword({ email, password })
-    if (error) { addToast(error.message, 'error'); return false }
+    if (error) {
+      const errStr = typeof error.message === 'string' ? error.message.toLowerCase() : ''
+      const codeStr = typeof error.code === 'string' ? error.code.toLowerCase() : ''
+      const isInvalid = errStr.includes('invalid') || errStr.includes('password') || errStr.includes('credential') || errStr.includes('unauthorized') || codeStr.includes('unauthorized')
+      const msg = isInvalid
+        ? 'Email atau password salah. Silakan periksa kembali.'
+        : (error.message || 'Gagal masuk. Silakan coba lagi.')
+      addToast(msg, 'error')
+      return { success: false, error: msg }
+    }
     localStorage.setItem('access_token', data.accessToken)
     login(data.user, data)
     addToast('Berhasil masuk!', 'success')
     navigate('/dashboard')
-    return true
+    return { success: true }
   }, [login, navigate, addToast])
 
   const signUp = useCallback(async (email, password, options = {}) => {

@@ -3,6 +3,8 @@ import { createWorker } from 'tesseract.js'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import api from '../../services/api'
+import useAuthStore from '../../store/authStore'
+import useConfirmStore from '../../store/confirmStore'
 
 const STAGES = {
  upload: 'Pilih file gambar atau foto CV lama Anda.',
@@ -12,8 +14,10 @@ const STAGES = {
  done: 'Data CV berhasil diekstrak!',
 }
 
-export default function OCRImportModal({ open, onClose, onImport }) {
- const [stage, setStage] = useState('upload')
+ export default function OCRImportModal({ open, onClose, onImport }) {
+  const fetchTokenBalance = useAuthStore((s) => s.fetchTokenBalance)
+  const requestConfirm = useConfirmStore((s) => s.requestConfirm)
+  const [stage, setStage] = useState('upload')
  const [file, setFile] = useState(null)
  const [preview, setPreview] = useState(null)
  const [ocrText, setOcrText] = useState('')
@@ -70,19 +74,21 @@ export default function OCRImportModal({ open, onClose, onImport }) {
  }
  }
 
- const handleParse = async () => {
- if (!ocrText.trim()) return
- setStage('parsing')
+  const handleParse = async () => {
+  if (!ocrText.trim()) return
+  if (!await requestConfirm('Fitur ini akan menggunakan')) return
+  setStage('parsing')
  setError(null)
 
  try {
  const res = await api.post('/api/cv/parse-ocr', { text: ocrText })
  setStage('done')
  // small delay so user sees "done" state
- setTimeout(() => {
- onImport(res.data.data)
- handleClose()
- }, 600)
+  setTimeout(() => {
+  onImport(res.data.data)
+  fetchTokenBalance()
+  handleClose()
+  }, 600)
  } catch (err) {
  setError(err.response?.data?.error || 'Gagal mem-parse teks CV')
  setStage('review')

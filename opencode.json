@@ -9,8 +9,8 @@
         "@insforge/mcp@latest"
       ],
       "environment": {
-        "API_KEY": "INSFORGE_SERVICE_KEY_PLACEHOLDER",
-        "API_BASE_URL": "https://INSFORGE_HOST_PLACEHOLDER"
+        "API_KEY": "ik_4d3ca6e45067abcb06306c8edd48025f",
+        "API_BASE_URL": "https://d5n38n23.ap-southeast.insforge.app"
       }
     }
   }

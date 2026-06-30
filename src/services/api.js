@@ -12,13 +12,29 @@ api.interceptors.request.use((config) => {
 })
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    const tokenBalance = res.data?.tokenBalance ?? res.data?.data?.tokenBalance
+    if (tokenBalance != null) {
+      import('../store/authStore').then((m) => {
+        const store = m.default
+        const current = store.getState().tokenBalance
+        if (current !== tokenBalance) {
+          store.getState().setTokenBalance(tokenBalance)
+        }
+      })
+    }
+    return res
+  },
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status
+    if (status === 401) {
       localStorage.removeItem('access_token')
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
         window.location.href = '/login?expired=1'
       }
+    }
+    if (status === 402 && window.location.pathname !== '/tokens') {
+      window.location.href = '/tokens?insufficient=1'
     }
     return Promise.reject(err)
   }
