@@ -82,22 +82,31 @@ export default function useLetter() {
     if (!data) return
     setSaving(true)
     try {
-      await api.post('/api/letter', {
+      const payload = {
         cv_id: data.cv_id,
-        position: data.position,
-        company: data.company,
-        company_field: data.companyField || '',
-        info_source: data.infoSource || '',
-        recipient_title: data.recipientTitle || 'HRD',
+        position: data.position || '',
+        company: data.company || '',
+        content: data.content || (letter?.content || ''),
+        companyField: data.companyField || '',
+        infoSource: data.infoSource || '',
+        recipientTitle: data.recipientTitle || 'HRD',
         city: data.city || '',
-        letter_date: data.letterDate || '',
-        relevant_experience: data.relevantExperience || '',
+        letterDate: data.letterDate || '',
+        personal: data.personal || {},
         highlights: data.highlights || [],
         attachments: data.attachments || [],
-        custom_attachment: data.customAttachment || '',
-        personal: data.personal || {},
-        content: letter?.content || '',
-      })
+        relevantExperience: data.relevantExperience || '',
+        skills: data.skills || null,
+      }
+      
+      if (letter?.id) {
+        // Update existing letter
+        await api.put(`/api/letter/${letter.id}`, payload)
+      } else {
+        // Create new letter
+        await api.post('/api/letter', payload)
+      }
+      
       if (!silent) addToast('Surat Berhasil Disimpan', 'success')
       return true
     } catch (err) {
@@ -107,7 +116,7 @@ export default function useLetter() {
     } finally {
       setSaving(false)
     }
-  }, [letter, addToast])
+  }, [letter, existingLetter, addToast])
 
   const deleteLetter = useCallback(async (id) => {
     try {

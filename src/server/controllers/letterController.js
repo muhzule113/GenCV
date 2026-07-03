@@ -30,8 +30,8 @@ export async function listLetters(req, res) {
 
 export async function createLetter(req, res) {
   const { cv_id, position, company, content } = req.body;
-  if (!position || !company || !cv_id) {
-    return res.status(400).json({ error: 'Position, company, and cv_id are required' });
+  if (!cv_id) {
+    return res.status(400).json({ error: 'cv_id is required' });
   }
 
   const { data, error } = await insforge.database
@@ -49,9 +49,7 @@ export async function createLetter(req, res) {
   if (error) return res.status(500).json({ error: error.message });
 
   res.status(201).json({ success: true, data });
-}
-
-export async function getLetter(req, res) {
+}export async function getLetter(req, res) {
   const { data, error } = await insforge.database
     .from('cover_letters')
     .select('*')
@@ -99,17 +97,31 @@ export async function getLetter(req, res) {
 }
 
 export async function updateLetter(req, res) {
-  const { cv_id, position, company, content } = req.body;
+  const { cv_id, position, company, content, companyField, infoSource, recipientTitle, city, letterDate, personal, highlights, attachments, relevantExperience, skills } = req.body;
+  if (!req.params.id) return res.status(400).json({ error: 'id is required' });
+
+  const updateData = {
+    updated_at: new Date().toISOString(),
+  };
+  
+  if (cv_id !== undefined) updateData.cv_id = cv_id;
+  if (position !== undefined) updateData.position = position;
+  if (company !== undefined) updateData.company = company;
+  if (content !== undefined) updateData.content = content;
+  if (companyField !== undefined) updateData.companyField = companyField;
+  if (infoSource !== undefined) updateData.infoSource = infoSource;
+  if (recipientTitle !== undefined) updateData.recipientTitle = recipientTitle;
+  if (city !== undefined) updateData.city = city;
+  if (letterDate !== undefined) updateData.letterDate = letterDate;
+  if (personal !== undefined) updateData.personal = personal;
+  if (highlights !== undefined) updateData.highlights = highlights;
+  if (attachments !== undefined) updateData.attachments = attachments;
+  if (relevantExperience !== undefined) updateData.relevantExperience = relevantExperience;
+  if (skills !== undefined) updateData.skills = skills;
 
   const { data, error } = await insforge.database
     .from('cover_letters')
-    .update({
-      ...(cv_id !== undefined && { cv_id }),
-      ...(position && { position }),
-      ...(company && { company }),
-      ...(content !== undefined && { content }),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
     .select()
@@ -125,8 +137,6 @@ export async function updateLetter(req, res) {
 
   res.json({ success: true, data });
 }
-
-export async function deleteLetter(req, res) {
   const { data: existing } = await insforge.database
     .from('cover_letters')
     .select('id')

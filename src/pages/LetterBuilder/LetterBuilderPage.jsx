@@ -161,16 +161,18 @@ export default function LetterBuilderPage() {
 
   const handleSaveDraft = useCallback(async () => {
     setDraftSaving(true)
-    const ok = await saveLetter(form, { silent: true })
+    const ok = await saveLetter(form)
     setDraftSaving(false)
     if (ok) {
       // flushSync memaksa React flush state secara synchronous
       // sehingga useBlocker membaca dirty=false sebelum navigate dipanggil
       flushSync(() => {
         setDirty(false)
-        setShowDashboardConfirm(false)
       })
-      navigate('/dashboard')
+      // Tunggu 1.5 detik agar toast terlihat, baru navigate
+      setTimeout(() => {
+        navigate('/dashboard')
+      }, 1500)
     }
   }, [saveLetter, form, navigate])
 
