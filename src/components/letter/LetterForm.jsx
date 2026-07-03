@@ -5,6 +5,7 @@ import DatePicker from '../../components/common/DatePicker'
 import AIActionChip from '../../components/common/AIActionChip'
 import api from '../../services/api'
 import useConfirmStore from '../../store/confirmStore'
+import useProfileStore from '../../store/profileStore'
 
 const infoSourceOptions = [
   'LinkedIn',
@@ -52,6 +53,7 @@ function ToggleChip({ active, onClick, children }) {
 
 export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, existingLetter, onViewExisting, initialSkills }) {
   const requestConfirm = useConfirmStore((s) => s.requestConfirm)
+  const syncFrom = useProfileStore((s) => s.syncFrom)
   const [cvList, setCvList] = useState([])
   const [isLoadingCV, setIsLoadingCV] = useState(false)
   const [infoSourceOther, setInfoSourceOther] = useState('')
@@ -118,6 +120,8 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             portfolio: p.portfolio || '',
           },
         }))
+
+        syncFrom(p)
 
         const skills = d.skills || {}
         setCvSkills({

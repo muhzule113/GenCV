@@ -134,15 +134,34 @@ export async function duplicateCV(req, res) {
 }
 
 export async function analyzeJobMatch(req, res) {
-  const { cvData, jobDescription } = req.body;
+  const { cvData, cvId, jobDescription } = req.body;
 
   if (!jobDescription) {
     return res.status(400).json({ error: 'Job description is required' });
   }
 
   try {
+    // If cvId is provided, fetch CV data from database
+    let finalCvData = cvData || {};
+    if (cvId) {
+      const { data: cv, error } = await insforge.database
+        .from('cvs')
+        .select('data')
+        .eq('id', cvId)
+        .eq('user_id', req.user.id)
+        .maybeSingle();
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+      if (!cv) {
+        return res.status(404).json({ error: 'CV not found' });
+      }
+      finalCvData = cv.data || {};
+    }
+
     const { analyzeJobMatch: analyzeFn } = await import('../services/aiService.js');
-    const raw = await analyzeFn({ cvData: cvData || {}, jobDescription });
+    const raw = await analyzeFn({ cvData: finalCvData, jobDescription });
     let result;
     try {
       result = JSON.parse(raw);

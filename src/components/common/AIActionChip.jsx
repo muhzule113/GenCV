@@ -1,13 +1,13 @@
-export default function AIActionChip({ icon, label, loading = false, onClick, disabled = false, pulse = false }) {
+export default function AIActionChip({ icon, label, loading = false, onClick, disabled = false, pulse = false, className = '' }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium tracking-wide text-clip hover:bg-clip/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className={`inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] text-sm font-medium tracking-wide text-clip hover:bg-clip/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
     >
       <svg
-        className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : pulse ? 'animate-pulse' : ''}`}
+        className={`w-4 h-4 shrink-0 ${loading ? 'animate-spin' : pulse ? 'animate-pulse' : ''}`}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -36,7 +36,7 @@ export default function AIActionChip({ icon, label, loading = false, onClick, di
           </>
         )}
       </svg>
-      {loading ? 'Memproses...' : label}
+      <span className="whitespace-nowrap">{loading ? 'Memproses...' : label}</span>
     </button>
   )
 }

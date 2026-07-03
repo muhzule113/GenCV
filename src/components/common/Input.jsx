@@ -3,7 +3,7 @@ import { forwardRef } from 'react'
 const Input = forwardRef(({ label, error, type = 'text', className = '', rightElement, ...props }, ref) => (
   <div className="w-full">
     {label && (
-      <label className="block text-sm text-ink mb-1.5">
+      <label className="block text-xs sm:text-sm text-ink mb-1.5">
         {label}
       </label>
     )}
@@ -18,7 +18,7 @@ const Input = forwardRef(({ label, error, type = 'text', className = '', rightEl
         <input
           ref={ref}
           type={type}
-          className={`field ${rightElement ? 'pr-10' : ''} ${error ? 'border-danger' : ''} ${className}`}
+          className={`field min-h-[44px] ${rightElement ? 'pr-10' : ''} ${error ? 'border-danger' : ''} ${className}`}
           {...props}
         />
       )}

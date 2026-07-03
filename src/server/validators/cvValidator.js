@@ -75,6 +75,7 @@ export const updateCVSchema = z.object({
 // Analyze job match — frontend sends cvData (object) + jobDescription
 export const analyzeJobMatchSchema = z.object({
   cvData: z.object({}).passthrough().optional(),
+  cvId: z.string().optional(),
   jobDescription: z.string().min(10, 'Deskripsi pekerjaan minimal 10 karakter').max(5000, 'Deskripsi pekerjaan maksimal 5000 karakter'),
 });
 

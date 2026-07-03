@@ -19,6 +19,7 @@ const CVBuilderPage = lazy(() => import('./pages/CVBuilder/CVBuilderPage'))
 const LetterBuilderPage = lazy(() => import('./pages/LetterBuilder/LetterBuilderPage'))
 const SharedCVPage = lazy(() => import('./pages/SharedCV/SharedCVPage'))
 const TokensPage = lazy(() => import('./pages/Tokens/TokensPage'))
+const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage'))
 
 const PageLoader = () => (
   <div className="min-h-screen bg-paper flex items-center justify-center">
@@ -78,6 +79,7 @@ const router = createBrowserRouter([
       { path: '/letter/new', element: <Suspense fallback={<PageLoader />}><ProtectedRoute><LetterBuilderPage /></ProtectedRoute></Suspense> },
       { path: '/letter/:id/edit', element: <Suspense fallback={<PageLoader />}><ProtectedRoute><LetterBuilderPage /></ProtectedRoute></Suspense> },
       { path: '/tokens', element: <Suspense fallback={<PageLoader />}><ProtectedRoute><TokensPage /></ProtectedRoute></Suspense> },
+      { path: '/profile', element: <Suspense fallback={<PageLoader />}><ProtectedRoute><ProfilePage /></ProtectedRoute></Suspense> },
       { path: '/cv/s/:token', element: <Suspense fallback={<PageLoader />}><SharedCVPage /></Suspense> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

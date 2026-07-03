@@ -8,6 +8,7 @@ import EmptyState from '../../components/common/EmptyState'
 import Modal from '../../components/common/Modal'
 import { DocumentCardSkeleton } from '../../components/common/Skeleton'
 import OCRImportModal from '../../components/cv/OCRImportModal'
+import JobAnalysisModal from '../../components/dashboard/JobAnalysisModal'
 import api from '../../services/api'
 import { pdf } from '@react-pdf/renderer'
 import { ATSCleanTemplate } from '../../components/cv/templates/ATSCleanTemplate'
@@ -20,10 +21,11 @@ export default function DashboardPage() {
  const [searchParams, setSearchParams] = useSearchParams()
  const activeTab = searchParams.get('tab') || 'all'
  const navigate = useNavigate()
- const [deleteModal, setDeleteModal] = useState(null)
- const [shareModal, setShareModal] = useState(null)
- const [ocrOpen, setOcrOpen] = useState(false)
- const [cvs, setCvs] = useState([])
+  const [deleteModal, setDeleteModal] = useState(null)
+  const [shareModal, setShareModal] = useState(null)
+  const [ocrOpen, setOcrOpen] = useState(false)
+  const [jobAnalysisOpen, setJobAnalysisOpen] = useState(false)
+  const [cvs, setCvs] = useState([])
  const [letters, setLetters] = useState([])
  const [templates, setTemplates] = useState([])
  const [loading, setLoading] = useState(true)
@@ -331,26 +333,32 @@ const handleEdit = (doc) => {
  <h1 className="font-display text-h1 tracking-display text-ink mt-1">Dokumen Saya</h1>
  <p className="text-sm text-muted mt-1">Kelola dan buat CV serta surat lamaran pekerjaan Anda.</p>
  </div>
- <div className="flex gap-2">
- <Button size="sm" variant="ghost" onClick={() => setOcrOpen(true)}>
- <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
- <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
- </svg>
- Import
- </Button>
- <Button size="sm" onClick={() => navigate('/cv/new')}>
- <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
- <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
- </svg>
- Buat CV
- </Button>
- <Button size="sm" variant="secondary" onClick={() => navigate('/letter/new')}>
- <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
- <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
- </svg>
- Buat Surat
- </Button>
- </div>
+  <div className="flex gap-2">
+  <Button size="sm" variant="ghost" onClick={() => setOcrOpen(true)}>
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+  Import
+  </Button>
+  <Button size="sm" variant="secondary" onClick={() => setJobAnalysisOpen(true)}>
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+  </svg>
+  Analisis Lowongan
+  </Button>
+  <Button size="sm" onClick={() => navigate('/cv/new')}>
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+  </svg>
+  Buat CV
+  </Button>
+  <Button size="sm" variant="secondary" onClick={() => navigate('/letter/new')}>
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+  </svg>
+  Buat Surat
+  </Button>
+  </div>
  </div>
 
  {/* Stats bar */}
@@ -511,7 +519,8 @@ const handleEdit = (doc) => {
  </div>
  </Modal>
 
- <OCRImportModal open={ocrOpen} onClose={() => setOcrOpen(false)} onImport={handleOCRImport} />
- </div>
- )
+  <OCRImportModal open={ocrOpen} onClose={() => setOcrOpen(false)} onImport={handleOCRImport} />
+  <JobAnalysisModal open={jobAnalysisOpen} onClose={() => setJobAnalysisOpen(false)} />
+  </div>
+  )
 }

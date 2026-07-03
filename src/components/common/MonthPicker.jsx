@@ -40,21 +40,21 @@ export default function MonthPicker({ label, value, onChange, disabled, placehol
  {label}
  </label>
  )}
- <button
- type="button"
- disabled={disabled}
- onClick={() => !disabled && setOpen(v => !v)}
- className={`w-full flex items-center justify-between px-4 py-2.5 bg-white border rounded-lg text-body transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary ${
- disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'
- } ${open ? 'border-primary ring-2 ring-primary/30' : 'border-border '}`}
- >
- <span className={display ? 'text-ink ' : 'text-muted '}>
- {display || placeholder}
- </span>
- <svg className={`w-4 h-4 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
- <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
- </svg>
- </button>
+  <button
+  type="button"
+  disabled={disabled}
+  onClick={() => !disabled && setOpen(v => !v)}
+  className={`w-full flex items-center justify-between px-4 py-2.5 bg-white border text-body transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary ${
+  disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'
+  } ${open ? 'border-primary ring-2 ring-primary/30' : 'border-border '}`}
+  >
+  <span className={display ? 'text-ink ' : 'text-muted '}>
+  {display || placeholder}
+  </span>
+  <svg className={`w-4 h-4 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+  </button>
 
  {open && (
  <div className="absolute z-30 mt-1.5 bg-white border border-border rounded-xl shadow-lg p-3 w-56">

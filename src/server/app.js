@@ -13,6 +13,7 @@ import cvRoutes from './routes/cvRoutes.js';
 import letterRoutes from './routes/letterRoutes.js';
 import templateRoutes from './routes/templateRoutes.js';
 import tokenRoutes from './routes/tokenRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -67,6 +68,7 @@ app.use('/api/cv', cvRoutes);
 app.use('/api/letter', letterRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/tokens', tokenRoutes);
+app.use('/api/profile', profileRoutes);
 
 app.use(Sentry.expressErrorHandler());
 app.use((err, req, res, next) => {

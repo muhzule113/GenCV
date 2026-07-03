@@ -10,17 +10,31 @@ import { PageLoader } from '../../components/common/Skeleton'
 import TemplatePicker from '../../components/cv/TemplatePicker'
 import CVPreview from '../../components/cv/CVPreview'
 import ATSScorePanel from '../../components/cv/ATSScorePanel'
+import JSONImportModal from '../../components/cv/JSONImportModal'
 import StepPersonal from '../../components/cv/CVForm/StepPersonal'
 import StepSummary from '../../components/cv/CVForm/StepSummary'
 import StepExperience from '../../components/cv/CVForm/StepExperience'
 import StepEducation from '../../components/cv/CVForm/StepEducation'
 import StepSkills from '../../components/cv/CVForm/StepSkills'
 import useCVStore from '../../store/cvStore'
+import useProfileStore from '../../store/profileStore'
 import useCV from '../../hooks/useCV'
 import useUnsavedChanges from '../../hooks/useUnsavedChanges'
+import { useAutoSave } from '../../hooks/useAutoSave'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { ATSCleanTemplate } from '../../components/cv/templates/ATSCleanTemplate'
 import { ATSModernTemplate } from '../../components/cv/templates/ATSModernTemplate'
+import { ModernTechTemplate } from '../../components/cv/templates/ModernTechTemplate'
+import { CreativeTemplate } from '../../components/cv/templates/CreativeTemplate'
+
+function getTemplateComponent(templateId, cvData) {
+  switch (templateId) {
+    case 'ats-modern-v1': return <ATSModernTemplate data={cvData} />
+    case 'modern-tech-v1': return <ModernTechTemplate data={cvData} />
+    case 'creative-v1': return <CreativeTemplate data={cvData} />
+    default: return <ATSCleanTemplate data={cvData} />
+  }
+}
 
 const steps = ['Data Diri', 'Pengalaman', 'Pendidikan', 'Keahlian & Proyek', 'Ringkasan', 'Template & Preview']
 
@@ -42,47 +56,67 @@ export default function CVBuilderPage() {
   const { id: editId } = useParams()
   const { currentStep, setStep, cvData, updateData, templateId, setTemplateId, title, setTitle, reset } = useCVStore()
   const { generateSummary, saveDraft, loadCV } = useCV()
+  const syncFromCV = useProfileStore((s) => s.syncFromCV)
   const [generating, setGenerating] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [templateModal, setTemplateModal] = useState(false)
   const [showATSModal, setShowATSModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loadingCV, setLoadingCV] = useState(!!editId)
-  const [loadError, setLoadError] = useState(null)
   const [dirty, setDirty] = useState(false)
   const { blocked, proceed, reset: clearBlocker } = useUnsavedChanges(dirty)
   const [showDashboardConfirm, setShowDashboardConfirm] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [draftName] = useState(() => editId ? `cv-${editId}` : `cv-${Date.now()}`)
+  const { status: saveStatus } = useAutoSave(
+    { cvData, templateId, title, currentStep },
+    `gencv-draft-${draftName}`,
+    { delay: 1000 }
+  )
 
   useEffect(() => {
     if (!editId) {
       reset()
       setLoadingCV(false)
-      setLoadError(null)
       return
     }
     let cancelled = false
     setLoadingCV(true)
-    setLoadError(null)
     ;(async () => {
       const cv = await loadCV(editId)
       if (cancelled) return
       if (!cv) {
-        setLoadError('CV tidak ditemukan atau gagal dimuat')
         setLoadingCV(false)
         return
       }
       if (cv.template_id) setTemplateId(cv.template_id)
       setStep(0)
       setLoadingCV(false)
+      if (cv.data || cv) {
+        syncFromCV(cv.data || cv)
+      }
     })()
     return () => { cancelled = true }
-  }, [editId, loadCV, reset, setTemplateId, setStep])
+  }, [editId, loadCV, reset, setTemplateId, setStep, syncFromCV])
 
   const handleGenerate = async (params) => {
     setGenerating(true)
     const summary = await generateSummary(params)
     setGenerating(false)
     return summary
+  }
+
+  const handleImport = (data) => {
+    updateData('personal', data.personal)
+    updateData('summary', data.summary)
+    updateData('experiences', data.experiences)
+    updateData('educations', data.educations)
+    updateData('skills', data.skills)
+    updateData('projects', data.projects)
+    updateData('certifications', data.certifications)
+    updateData('languages', data.languages)
+    syncFromCV(data)
+    setDirty(true)
   }
 
   const handleSave = async () => {
@@ -132,10 +166,10 @@ export default function CVBuilderPage() {
 
   const stepComponents = [
     <StepPersonal key="personal" data={cvData} onChange={handleCvDataChange} />,
-    <StepExperience key="exp" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} />,
-    <StepEducation key="edu" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} />,
-    <StepSkills key="skills" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} />,
-    <StepSummary key="summary" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v) }} onGenerate={handleGenerate} generating={generating} />,
+    <StepExperience key="exp" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v); syncFromCV({ [f]: v }) }} />,
+    <StepEducation key="edu" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v); syncFromCV({ [f]: v }) }} />,
+    <StepSkills key="skills" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v); syncFromCV({ [f]: v }) }} />,
+    <StepSummary key="summary" data={cvData} onChange={(f, v) => { setDirty(true); updateData(f, v); syncFromCV({ [f]: v }) }} onGenerate={handleGenerate} generating={generating} />,
     <div key="final" className="space-y-5">
       <div className="flex items-start sm:items-center justify-between gap-2">
         <div>
@@ -181,20 +215,37 @@ export default function CVBuilderPage() {
   return (
     <div className="min-h-screen bg-paper">
       <Navbar onDashboard={handleDashboardClick} />
-      <div className="container-page py-4 sm:py-6">
-        <div className="mb-4 sm:mb-6">
+      <div className="container-page py-3 sm:py-4 lg:py-6">
+        <div className="mb-3 sm:mb-4 lg:mb-6">
           <Stepper steps={steps} currentStep={currentStep} onStepClick={setStep} />
+          <div className="flex items-center justify-between gap-2 mt-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowImportModal(true)} className="text-xs">
+              <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Import JSON
+            </Button>
+            <span className={`text-xs ${
+              saveStatus === 'saved' ? 'text-success' :
+              saveStatus === 'saving' ? 'text-warning' :
+              'text-danger'
+            }`}>
+              {saveStatus === 'saved' && <>&#10003; Auto-saved</>}
+              {saveStatus === 'saving' && <>&#8635; Saving...</>}
+              {saveStatus === 'error' && <>&#10007; Save failed</>}
+            </span>
+          </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-          <div className="flex-1 card p-4 sm:p-6">
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6">
+          <div className="flex-1 card p-3 sm:p-4 lg:p-6">
             {loadingCV ? (
               <PageLoader text="Memuat CV..." />
             ) : (
               <>
                 {stepComponents[currentStep]}
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-border gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-4 sm:mt-6 lg:mt-8 pt-4 sm:pt-5 lg:pt-6 border-t border-border gap-2 sm:gap-3">
                   <Button variant="ghost" onClick={handlePrev} className="order-2 sm:order-1">
                     {currentStep === 0 ? 'Kembali ke Dashboard' : 'Sebelumnya'}
                   </Button>
@@ -203,14 +254,14 @@ export default function CVBuilderPage() {
                       Kembali ke Dashboard
                     </Button>
                   )}
-                  <div className="flex gap-2 sm:gap-3 order-1 sm:order-2">
+                  <div className="flex gap-2 order-1 sm:order-2">
                     {currentStep === steps.length - 1 ? (
                       <>
                         <Button variant="secondary" loading={saving} onClick={handleSave} className="flex-1 sm:flex-none">
                           {editId ? 'Simpan Perubahan' : 'Simpan Draft'}
                         </Button>
                         <PDFDownloadLink
-                          document={templateId === 'ats-modern-v1' ? <ATSModernTemplate data={cvData} /> : <ATSCleanTemplate data={cvData} />}
+                          document={getTemplateComponent(templateId, cvData)}
                           fileName={`${cvData.personal?.name?.replace(/\s+/g, '-') || 'CV'}-CV.pdf`}
                         >
                           {({ loading: pdfLoading }) => (
@@ -245,7 +296,7 @@ export default function CVBuilderPage() {
                 <CVPreview data={cvData} templateId={templateId} noBorder />
               </div>
             </div>
-            <div className="lg:hidden space-y-4">
+            <div className="lg:hidden space-y-3">
               <button
                 onClick={() => setShowATSModal(true)}
                 className="w-full flex items-center gap-3 px-4 py-3 bg-surface border border-border hover:bg-ink/5 transition-colors text-left group"
@@ -275,6 +326,7 @@ export default function CVBuilderPage() {
       <Modal open={showATSModal} onClose={() => setShowATSModal(false)} title="Skor ATS" size="lg">
         <ATSScorePanel data={cvData} noCard noPadding />
       </Modal>
+      <JSONImportModal open={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleImport} />
       <UnsavedChangesModal
         open={blocked}
         onSave={handleQuickSave}

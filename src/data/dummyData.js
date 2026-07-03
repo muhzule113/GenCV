@@ -239,4 +239,16 @@ export const dummyTemplates = [
     description: 'Modern dengan aksen warna tipis, tetap ATS-safe',
     is_active: true,
   },
+  {
+    id: 'modern-tech-v1',
+    name: 'Modern Tech',
+    description: '2-kolom sidebar gelap dengan skill bars, cocok untuk tech & startup',
+    is_active: true,
+  },
+  {
+    id: 'creative-v1',
+    name: 'Creative Pro',
+    description: 'Sidebar ungu dengan ikon, cocok untuk industri kreatif & desain',
+    is_active: true,
+  },
 ]

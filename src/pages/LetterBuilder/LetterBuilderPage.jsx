@@ -10,6 +10,7 @@ import LetterForm from '../../components/letter/LetterForm'
 import LetterEditor from '../../components/letter/LetterEditor'
 import useLetter from '../../hooks/useLetter'
 import useUnsavedChanges from '../../hooks/useUnsavedChanges'
+import { useAutoSave } from '../../hooks/useAutoSave'
 import useToastStore from '../../store/toastStore'
 import useConfirmStore from '../../store/confirmStore'
 import api from '../../services/api'
@@ -27,6 +28,14 @@ function sanitizeFileName(s) {
 }
 
 function buildInitialForm() {
+  const profile = (() => {
+    try {
+      const raw = localStorage.getItem('gencv-profile')
+      if (raw) return JSON.parse(raw)
+    } catch { /* ignore */ }
+    return null
+  })()
+  const p = profile?.personal || {}
   return {
     cv_id: '',
     position: '',
@@ -41,15 +50,15 @@ function buildInitialForm() {
     customAttachment: '',
     relevantExperience: '',
     personal: {
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-      birthPlace: '',
-      birthDate: '',
-      gender: '',
-      lastEducation: '',
-      portfolio: '',
+      name: p.name || '',
+      email: p.email || '',
+      phone: p.phone || '',
+      address: p.address || '',
+      birthPlace: p.birthPlace || '',
+      birthDate: p.birthDate || '',
+      gender: p.gender || '',
+      lastEducation: p.lastEducation || '',
+      portfolio: p.portfolio || '',
     },
   }
 }
@@ -85,6 +94,12 @@ export default function LetterBuilderPage() {
   const [draftSaving, setDraftSaving] = useState(false)
   const { blocked, proceed, reset: clearBlocker } = useUnsavedChanges(dirty)
   const [showDashboardConfirm, setShowDashboardConfirm] = useState(false)
+  const [draftName] = useState(() => editId ? `letter-${editId}` : `letter-${Date.now()}`)
+  const { status: saveStatus } = useAutoSave(
+    form,
+    `gencv-draft-${draftName}`,
+    { delay: 1000 }
+  )
 
   const handleSetForm = useCallback((updater) => {
     setDirty(true)
@@ -245,6 +260,15 @@ export default function LetterBuilderPage() {
           <h1 className="font-display text-h1 sm:text-display tracking-display text-ink mt-1">
             {editId ? 'Edit Surat Lamaran' : 'Buat Surat Lamaran'}
           </h1>
+          <span className={`text-xs mt-1 inline-block ${
+            saveStatus === 'saved' ? 'text-success' :
+            saveStatus === 'saving' ? 'text-warning' :
+            'text-danger'
+          }`}>
+            {saveStatus === 'saved' && <>&#10003; Auto-saved</>}
+            {saveStatus === 'saving' && <>&#8635; Saving...</>}
+            {saveStatus === 'error' && <>&#10007; Save failed</>}
+          </span>
         </div>
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           <div className="lg:w-1/2 lg:shrink-0 card p-4 sm:p-6">

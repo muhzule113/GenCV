@@ -28,49 +28,54 @@ export default function Stepper({ steps, currentStep, onStepClick }) {
                   ${!isCurrent && !isCompleted ? 'bg-border text-muted' : ''}
                 `}>
                   {isCompleted ? (
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                  ) : index + 1}
+                  ) : (
+                    index + 1
+                  )}
                 </span>
                 <span className="hidden md:inline">{step}</span>
               </button>
               {index < steps.length - 1 && (
-                <div className={`flex-1 h-px mx-2 ${index < currentStep ? 'bg-ink' : 'bg-border'}`} />
+                <div className={`flex-1 h-0.5 mx-2 transition-colors duration-150 ${
+                  isCompleted ? 'bg-success' : 'bg-border'
+                }`} />
               )}
             </div>
           )
         })}
       </div>
 
-      {/* Mobile Stepper */}
-      <div className="sm:hidden space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="font-mono text-[10px] tracking-widest text-clip uppercase text-muted">
+      {/* Mobile Stepper - Compact Dropdown Style */}
+      <div className="sm:hidden">
+        <div className="flex items-center gap-3 mb-3">
+          <span className={`flex items-center justify-center w-8 h-8 text-sm font-bold font-mono bg-ink text-paper`}>
+            {currentStep + 1}
+          </span>
+          <div className="flex-1">
+            <p className="text-xs font-mono text-clip uppercase tracking-wider mb-0.5">
               Langkah {currentStep + 1} dari {steps.length}
-            </span>
-            <h3 className="font-display text-sm font-semibold text-ink mt-0.5">
-              {steps[currentStep]}
-            </h3>
+            </p>
+            <p className="text-sm font-medium text-ink">{steps[currentStep]}</p>
           </div>
         </div>
-        {/* Segmented Progress Bar */}
-        <div className="flex gap-1 h-1.5 w-full">
-          {steps.map((_, index) => {
+        <div className="flex gap-1">
+          {steps.map((step, index) => {
             const isCompleted = index < currentStep
             const isCurrent = index === currentStep
             const isClickable = index <= currentStep || isCompleted
+
             return (
               <button
                 key={index}
                 type="button"
                 onClick={() => isClickable && onStepClick?.(index)}
                 disabled={!isClickable}
-                className={`flex-1 h-full transition-colors duration-150 border-0 ${
+                className={`flex-1 h-1.5 transition-colors duration-150 border-0 ${
                   isCurrent || isCompleted ? 'bg-ink' : 'bg-border'
-                }`}
-                aria-label={`Pindah ke langkah ${index + 1}`}
+                } ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                aria-label={`Langkah ${index + 1}: ${step}`}
               />
             )
           })}
