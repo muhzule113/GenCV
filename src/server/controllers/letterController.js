@@ -97,27 +97,18 @@ export async function createLetter(req, res) {
 }
 
 export async function updateLetter(req, res) {
-  const { cv_id, position, company, content, companyField, infoSource, recipientTitle, city, letterDate, personal, highlights, attachments, relevantExperience, skills } = req.body;
+  const { cv_id, position, company, content } = req.body;
   if (!req.params.id) return res.status(400).json({ error: 'id is required' });
 
   const updateData = {
     updated_at: new Date().toISOString(),
   };
   
+  // Only update columns that exist in cover_letters table
   if (cv_id !== undefined) updateData.cv_id = cv_id;
   if (position !== undefined) updateData.position = position;
   if (company !== undefined) updateData.company = company;
   if (content !== undefined) updateData.content = content;
-  if (companyField !== undefined) updateData.companyField = companyField;
-  if (infoSource !== undefined) updateData.infoSource = infoSource;
-  if (recipientTitle !== undefined) updateData.recipientTitle = recipientTitle;
-  if (city !== undefined) updateData.city = city;
-  if (letterDate !== undefined) updateData.letterDate = letterDate;
-  if (personal !== undefined) updateData.personal = personal;
-  if (highlights !== undefined) updateData.highlights = highlights;
-  if (attachments !== undefined) updateData.attachments = attachments;
-  if (relevantExperience !== undefined) updateData.relevantExperience = relevantExperience;
-  if (skills !== undefined) updateData.skills = skills;
 
   const { data, error } = await insforge.database
     .from('cover_letters')
@@ -137,6 +128,8 @@ export async function updateLetter(req, res) {
 
   res.json({ success: true, data });
 }
+
+export async function deleteLetter(req, res) {
   const { data: existing } = await insforge.database
     .from('cover_letters')
     .select('id')

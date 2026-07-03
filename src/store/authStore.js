@@ -27,7 +27,7 @@ const useAuthStore = create((set, get) => ({
       if (get().isAuthenticated) {
         get().fetchTokenBalance()
       }
-    }, 3000)
+    }, 30000)
   },
   stopPolling: () => {
     if (_pollTimer) {

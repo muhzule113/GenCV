@@ -1,0 +1,95 @@
+{
+  "common": {
+    "appName": "GenCV - CV ATS-Friendly & Surat Lamaran",
+    "loading": "Memuat...",
+    "save": "Simpan",
+    "saving": "Menyimpan...",
+    "cancel": "Batal",
+    "delete": "Hapus",
+    "edit": "Edit",
+    "back": "Kembali",
+    "close": "Tutup",
+    "confirm": "Konfirmasi",
+    "search": "Cari...",
+    "error": "Terjadi kesalahan",
+    "networkError": "Gagal terhubung ke server",
+    "notFound": "Halaman tidak ditemukan",
+    "tryAgain": "Coba Lagi"
+  },
+  "auth": {
+    "login": "Masuk",
+    "register": "Daftar",
+    "logout": "Keluar",
+    "email": "Email",
+    "password": "Kata Sandi",
+    "name": "Nama Lengkap",
+    "loginTitle": "Masuk ke akun Anda",
+    "registerTitle": "Buat akun baru",
+    "loginSuccess": "Berhasil masuk",
+    "registerSuccess": "Pendaftaran berhasil",
+    "logoutSuccess": "Berhasil keluar"
+  },
+  "landing": {
+    "heroTitle": "CV ATS-Friendly & Surat Lamaran AI",
+    "heroSubtitle": "Buat CV yang lolos ATS dan surat lamaran profesional dengan bantuan AI dalam hitungan menit",
+    "getStarted": "Mulai Gratis",
+    "features": "Fitur Unggulan",
+    "featureATS": "ATS-Ready",
+    "featureATSDesc": "CV dioptimalkan untuk Applicant Tracking System",
+    "featureAI": "AI Generate",
+    "featureAIDesc": "Summary dan surat lamaran digenerate AI",
+    "featurePDF": "Instant PDF",
+    "featurePDFDesc": "Download PDF siap kirim dalam satu klik",
+    "howItWorks": "Cara Kerja",
+    "step1": "Isi Data CV",
+    "step2": "Generate dengan AI",
+    "step3": "Download PDF"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "myCVs": "CV Saya",
+    "myLetters": "Surat Lamaran",
+    "createNew": "Buat Baru",
+    "noCVs": "Belum ada CV. Buat CV pertama Anda!",
+    "noLetters": "Belum ada surat lamaran",
+    "tokenBalance": "Token Tersisa"
+  },
+  "cv": {
+    "title": "CV Builder",
+    "editTitle": "Edit CV",
+    "newTitle": "Buat CV Baru",
+    "steps": {
+      "personal": "Data Diri",
+      "summary": "Ringkasan",
+      "experience": "Pengalaman",
+      "education": "Pendidikan",
+      "skills": "Keahlian",
+      "projects": "Proyek"
+    },
+    "generateSummary": "Generate Ringkasan dengan AI",
+    "saveDraft": "Simpan Draft",
+    "exportPDF": "Download PDF",
+    "atsScore": "Skor ATS",
+    "template": "Template"
+  },
+  "letter": {
+    "title": "Surat Lamaran",
+    "editTitle": "Edit Surat Lamaran",
+    "generate": "Generate Surat",
+    "saveDraft": "Simpan Draft",
+    "downloadPDF": "Download PDF",
+    "position": "Posisi yang Dilamar",
+    "company": "Nama Perusahaan",
+    "successSaved": "Surat berhasil disimpan",
+    "successGenerated": "Surat lamaran berhasil digenerate!"
+  },
+  "tokens": {
+    "title": "Token",
+    "balance": "Saldo Token",
+    "packages": "Paket Token",
+    "buy": "Beli",
+    "starter": "Starter Pack",
+    "popular": "Popular Pack",
+    "pro": "Pro Pack"
+  }
+}

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/authMiddleware.js';
 import { requireToken } from '../middleware/tokenMiddleware.js';
+import { validate } from '../middleware/validationMiddleware.js';
+import { createCVSchema, updateCVSchema, analyzeJobMatchSchema, generateSummarySchema } from '../validators/cvValidator.js';
 import {
   listCVs,
   createCV,
@@ -24,13 +26,13 @@ router.get('/shared/:token', getSharedCV);
 router.use(requireAuth);
 
 router.get('/', listCVs);
-router.post('/', createCV);
-router.post('/generate-summary', requireToken, generateSummary);
+router.post('/', validate(createCVSchema), createCV);
+router.post('/generate-summary', validate(generateSummarySchema), requireToken, generateSummary);
 router.post('/recommend-skills', requireToken, recommendSkills);
-router.post('/analyze-job-match', requireToken, analyzeJobMatch);
+router.post('/analyze-job-match', validate(analyzeJobMatchSchema), requireToken, analyzeJobMatch);
 router.post('/parse-ocr', requireToken, parseOCRText);
 router.get('/:id', getCV);
-router.put('/:id', updateCV);
+router.put('/:id', validate(updateCVSchema), updateCV);
 router.delete('/:id', deleteCV);
 router.post('/:id/duplicate', duplicateCV);
 router.post('/:id/share', toggleShare);

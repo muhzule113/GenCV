@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import CoverLetterHTML from './CoverLetterHTML'
 import Button from '../common/Button'
 import useToastStore from '../../store/toastStore'
 
@@ -152,16 +151,41 @@ export default function LetterEditor({ letter, pdfButton }) {
 
           <div
             ref={containerRef}
-            className="overflow-auto bg-grid p-4 min-h-[250px] max-sm:min-h-[200px]"
+            className="overflow-auto bg-white p-8 min-h-[250px] max-sm:min-h-[200px] shadow-sm"
+            style={{ fontSize: `${11 * zoom}pt`, lineHeight: 1.6 }}
           >
-            <div className="cv-scaler" style={{ minHeight: '100%', height: `calc(${297 * zoom}mm + 16px)` }}>
-              <div
-                className="cv-page-wrap"
-                style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-              >
-                <CoverLetterHTML data={letter} />
+            {letter.content ? (
+              <div className="prose prose-sm max-w-none">
+                <p className="text-right text-sm text-gray-500 mb-4">
+                  {letter.city || 'Barru'}, {letter.date || ''}
+                </p>
+                <p className="mb-1">Kepada Yth.</p>
+                <p className="mb-1">{letter.recipientTitle || 'HRD'}</p>
+                <p className="mb-4">Di {letter.company || '[NAMA PERUSAHAAN]'}</p>
+                <p className="mb-2">
+                  <span className="font-semibold">Perihal</span>: Lamaran Pekerjaan sebagai{' '}
+                  <span className="font-semibold">{(letter.position || '').toUpperCase()}</span>
+                </p>
+                <p className="mb-4">Dengan hormat,</p>
+                <p className="mb-4">Saya yang bertanda tangan di bawah ini :</p>
+                {letter.personal?.name && (
+                  <div className="mb-1"><span className="inline-block w-36">Nama</span>: {letter.personal.name}</div>
+                )}
+                {letter.personal?.email && (
+                  <div className="mb-1"><span className="inline-block w-36">E-mail</span>: {letter.personal.email}</div>
+                )}
+                {letter.personal?.phone && (
+                  <div className="mb-1"><span className="inline-block w-36">Nomor HP</span>: {letter.personal.phone}</div>
+                )}
+                <div className="mt-6 whitespace-pre-wrap text-justify">
+                  {letter.content.split('\n\n').map((para, i) => (
+                    <p key={i} className="mb-3">{para}</p>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-gray-400 text-center mt-8">Surat belum digenerate. Isi form lalu klik Generate.</p>
+            )}
           </div>
         </div>
       ) : (
