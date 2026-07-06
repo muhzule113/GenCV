@@ -72,16 +72,8 @@ export const dummyCVs = [
         },
       ],
       certifications: [
-        {
-          name: 'AWS Certified Cloud Practitioner',
-          issuer: 'Amazon Web Services',
-          date: '2025-03',
-        },
-        {
-          name: 'Google Associate Android Developer',
-          issuer: 'Google',
-          date: '2024-08',
-        },
+        { name: 'AWS Certified Cloud Practitioner', issuer: 'Amazon Web Services', date: '2025-03' },
+        { name: 'Google Associate Android Developer', issuer: 'Google', date: '2024-08' },
       ],
     },
     created_at: '2026-06-01T08:00:00Z',
@@ -227,28 +219,14 @@ Reza Pratama`,
 ]
 
 export const dummyTemplates = [
-  {
-    id: 'ats-clean-v1',
-    name: 'ATS Clean',
-    description: 'Format minimalis satu kolom, 100% ATS-friendly',
-    is_active: true,
-  },
-  {
-    id: 'ats-modern-v1',
-    name: 'ATS Modern',
-    description: 'Modern dengan aksen warna tipis, tetap ATS-safe',
-    is_active: true,
-  },
-  {
-    id: 'modern-tech-v1',
-    name: 'Modern Tech',
-    description: '2-kolom sidebar gelap dengan skill bars, cocok untuk tech & startup',
-    is_active: true,
-  },
-  {
-    id: 'creative-v1',
-    name: 'Creative Pro',
-    description: 'Sidebar ungu dengan ikon, cocok untuk industri kreatif & desain',
-    is_active: true,
-  },
+  { id: 'ats-clean-v1', name: 'ATS Clean', description: 'Satu kolom hitam-putih murni, 100% ATS-friendly.', is_active: true },
+  { id: 'ats-modern-minimal-v1', name: 'ATS Modern Minimal', description: 'Aksen warna slate tipis pada garis nama, profesional dan bersih.', is_active: true },
+  { id: 'executive-serif-v1', name: 'Executive Serif', description: 'Desain formal menggunakan font Serif untuk level eksekutif/senior.', is_active: true },
+  { id: 'compact-onepage-v1', name: 'Compact One Page', description: 'Desain super ringkas, memaksimalkan ruang untuk CV 1 halaman.', is_active: true },
+  { id: 'sidebar-slim-v1', name: 'Sidebar Slim', description: 'Desain 2-kolom minimalis dengan sidebar abu-abu terang (Non-ATS-strict).', is_active: true },
+  { id: 'academic-minimal-v1', name: 'Academic Minimal', description: 'Tata letak akademis khusus dengan fokus pada publikasi dan riset.', is_active: true },
+  { id: 'technical-minimal-v1', name: 'Technical Minimal', description: 'Ideal untuk engineer/developer, menonjolkan daftar keahlian dan proyek.', is_active: true },
+  { id: 'fresh-graduate-minimal-v1', name: 'Fresh Graduate Minimal', description: 'Fokus pada pendidikan dan proyek organisasi bagi lulusan baru.', is_active: true },
+  { id: 'timeline-minimal-v1', name: 'Timeline Minimal', description: 'Alur riwayat karir dengan timeline vertikal minimalis.', is_active: true },
+  { id: 'two-tone-minimal-v1', name: 'Two-Tone Minimal', description: 'Kombinasi teks hitam dan abu-abu dengan 1 warna aksen di header.', is_active: true },
 ]

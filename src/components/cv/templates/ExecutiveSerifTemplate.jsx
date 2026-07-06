@@ -1,42 +1,41 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { formatDate, formatPeriod, getSkills } from './templateUtils'
 
-const accent = '#1A1A1A'
-
 const styles = StyleSheet.create({
-  page: { fontFamily: 'Helvetica', fontSize: 10, padding: 44, color: '#1A1A1A' },
-  header: { textAlign: 'center', marginBottom: 18, paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: accent },
-  name: { fontSize: 20, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
-  jobTitle: { fontSize: 10, color: '#555', letterSpacing: 2, marginBottom: 8, textTransform: 'uppercase' },
-  contactRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4, fontSize: 8, color: '#555' },
-  contactItem: { marginHorizontal: 6 },
+  page: { fontFamily: 'Times-Roman', fontSize: 10, padding: 46, color: '#000000' },
+  header: { textAlign: 'center', marginBottom: 18 },
+  name: { fontSize: 20, fontWeight: 'bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 },
+  jobTitle: { fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, fontStyle: 'italic', color: '#333' },
+  contactRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 6, fontSize: 8.5, color: '#444' },
+  contactItem: { marginHorizontal: 4 },
   sectionTitle: {
-    fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1.5,
-    borderBottomWidth: 1, borderBottomColor: accent, paddingBottom: 2, marginTop: 14, marginBottom: 6,
+    fontSize: 10.5, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1.5,
+    borderBottomWidth: 0.8, borderBottomColor: '#000000', paddingBottom: 3,
+    marginTop: 18, marginBottom: 8,
   },
-  summary: { fontSize: 9.5, lineHeight: 1.6, color: '#333', marginBottom: 4 },
-  bul: { marginLeft: 10, marginBottom: 2, lineHeight: 1.4, fontSize: 9.5, color: '#333' },
+  summary: { fontSize: 9.5, lineHeight: 1.5, color: '#111', marginBottom: 4, textAlign: 'justify' },
+  bul: { marginLeft: 12, marginBottom: 2.5, lineHeight: 1.4, fontSize: 9.5, color: '#111' },
   expHeader: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 1, alignItems: 'baseline' },
   expPosition: { fontWeight: 'bold', fontSize: 10.5 },
-  expDate: { fontSize: 8, color: '#666' },
-  expCompany: { fontSize: 9, color: '#444', marginBottom: 2, fontStyle: 'italic' },
+  expDate: { fontSize: 8.5, fontStyle: 'italic' },
+  expCompany: { fontSize: 9.5, color: '#222', marginBottom: 3, fontStyle: 'italic' },
   eduRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1, alignItems: 'baseline' },
   eduDegree: { fontWeight: 'bold', fontSize: 10 },
-  eduYear: { fontSize: 8.5, color: '#555' },
-  eduDetail: { fontSize: 9, color: '#333', marginBottom: 2 },
-  eduThesis: { fontSize: 8.5, color: '#555', fontStyle: 'italic', marginBottom: 3, marginLeft: 1 },
-  skillContainer: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: 10 },
+  eduYear: { fontSize: 8.5, fontStyle: 'italic' },
+  eduDetail: { fontSize: 9.5, color: '#222', marginBottom: 2 },
+  eduThesis: { fontSize: 8.5, fontStyle: 'italic', marginBottom: 3 },
+  skillContainer: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: 2 },
   skillItemWrapper: { width: '50%' },
-  skillItem: { marginBottom: 2, lineHeight: 1.4, fontSize: 9.5, color: '#333' },
+  skillItem: { marginBottom: 2.5, lineHeight: 1.4, fontSize: 9.5, color: '#111' },
   projRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 3, marginBottom: 1, alignItems: 'baseline' },
   projName: { fontWeight: 'bold', fontSize: 10 },
-  projTech: { fontSize: 8, color: '#555', fontStyle: 'italic', marginBottom: 1 },
-  projDesc: { fontSize: 9, color: '#333', lineHeight: 1.3, marginBottom: 2 },
-  certItem: { fontSize: 8.5, color: '#333', marginBottom: 1 },
-  langItem: { fontSize: 8.5, color: '#333', lineHeight: 1.5 },
+  projTech: { fontSize: 8.5, color: '#444', fontStyle: 'italic', marginBottom: 1 },
+  projDesc: { fontSize: 9.5, color: '#111', lineHeight: 1.3, marginBottom: 2 },
+  certItem: { fontSize: 9, color: '#111', marginBottom: 1.5 },
+  langItem: { fontSize: 9, color: '#111', lineHeight: 1.5 },
 })
 
-export function ATSCleanTemplate({ data }) {
+export function ExecutiveSerifTemplate({ data }) {
   const skills = getSkills(data)
   const p = data.personal || {}
 
@@ -51,7 +50,7 @@ export function ATSCleanTemplate({ data }) {
               <Text key={i} style={styles.contactItem}>{c}</Text>
             ))}
           </View>
-          <View style={{ marginTop: 4, ...styles.contactRow }}>
+          <View style={{ marginTop: 2, ...styles.contactRow }}>
             {[p.linkedin, p.github, p.portfolio].filter(Boolean).map((c, i) => (
               <Text key={i} style={styles.contactItem}>{c}</Text>
             ))}
@@ -69,7 +68,7 @@ export function ATSCleanTemplate({ data }) {
           <View>
             <Text style={styles.sectionTitle}>Pengalaman Kerja</Text>
             {data.experiences.map((exp, i) => (
-              <View key={i} style={{ marginBottom: 7 }}>
+              <View key={i} style={{ marginBottom: 8 }}>
                 <View style={styles.expHeader}>
                   <Text style={styles.expPosition}>{exp.position}</Text>
                   <Text style={styles.expDate}>{formatPeriod(exp.startDate || exp.start_date, exp.endDate || exp.end_date, exp.isCurrent)}</Text>
@@ -117,22 +116,6 @@ export function ATSCleanTemplate({ data }) {
           </View>
         )}
 
-        {data.certifications?.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>Sertifikasi</Text>
-            {data.certifications.map((c, i) => (
-              <Text key={i} style={styles.certItem}>• {c.name}{c.issuer ? ` — ${c.issuer}` : ''}{c.date ? ` (${formatDate(c.date)})` : ''}</Text>
-            ))}
-          </View>
-        )}
-
-        {data.languages?.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>Bahasa</Text>
-            <Text style={styles.langItem}>{data.languages.map((l) => `${l.name}${l.level ? ` — ${l.level}` : ''}`).join('  •  ')}</Text>
-          </View>
-        )}
-
         {data.projects?.length > 0 && (
           <View>
             <Text style={styles.sectionTitle}>Proyek</Text>
@@ -148,6 +131,22 @@ export function ATSCleanTemplate({ data }) {
                 {proj.description && <Text style={styles.projDesc}>{proj.description}</Text>}
               </View>
             ))}
+          </View>
+        )}
+
+        {data.certifications?.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Sertifikasi</Text>
+            {data.certifications.map((c, i) => (
+              <Text key={i} style={styles.certItem}>• {c.name}{c.issuer ? ` — ${c.issuer}` : ''}{c.date ? ` (${formatDate(c.date)})` : ''}</Text>
+            ))}
+          </View>
+        )}
+
+        {data.languages?.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Bahasa</Text>
+            <Text style={styles.langItem}>{data.languages.map((l) => `${l.name}${l.level ? ` — ${l.level}` : ''}`).join('  •  ')}</Text>
           </View>
         )}
       </Page>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { flushSync } from 'react-dom'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Navbar from '../../components/common/Navbar'
 import Stepper from '../../components/common/Stepper'
 import Button from '../../components/common/Button'
@@ -23,15 +23,27 @@ import useUnsavedChanges from '../../hooks/useUnsavedChanges'
 import { useAutoSave } from '../../hooks/useAutoSave'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { ATSCleanTemplate } from '../../components/cv/templates/ATSCleanTemplate'
-import { ATSModernTemplate } from '../../components/cv/templates/ATSModernTemplate'
-import { ModernTechTemplate } from '../../components/cv/templates/ModernTechTemplate'
-import { CreativeTemplate } from '../../components/cv/templates/CreativeTemplate'
+import { ATSModernMinimalTemplate } from '../../components/cv/templates/ATSModernMinimalTemplate'
+import { ExecutiveSerifTemplate } from '../../components/cv/templates/ExecutiveSerifTemplate'
+import { CompactOnePageTemplate } from '../../components/cv/templates/CompactOnePageTemplate'
+import { SidebarSlimTemplate } from '../../components/cv/templates/SidebarSlimTemplate'
+import { AcademicMinimalTemplate } from '../../components/cv/templates/AcademicMinimalTemplate'
+import { TechnicalMinimalTemplate } from '../../components/cv/templates/TechnicalMinimalTemplate'
+import { FreshGraduateMinimalTemplate } from '../../components/cv/templates/FreshGraduateMinimalTemplate'
+import { TimelineMinimalTemplate } from '../../components/cv/templates/TimelineMinimalTemplate'
+import { TwoToneMinimalTemplate } from '../../components/cv/templates/TwoToneMinimalTemplate'
 
 function getTemplateComponent(templateId, cvData) {
   switch (templateId) {
-    case 'ats-modern-v1': return <ATSModernTemplate data={cvData} />
-    case 'modern-tech-v1': return <ModernTechTemplate data={cvData} />
-    case 'creative-v1': return <CreativeTemplate data={cvData} />
+    case 'ats-modern-minimal-v1': return <ATSModernMinimalTemplate data={cvData} />
+    case 'executive-serif-v1': return <ExecutiveSerifTemplate data={cvData} />
+    case 'compact-onepage-v1': return <CompactOnePageTemplate data={cvData} />
+    case 'sidebar-slim-v1': return <SidebarSlimTemplate data={cvData} />
+    case 'academic-minimal-v1': return <AcademicMinimalTemplate data={cvData} />
+    case 'technical-minimal-v1': return <TechnicalMinimalTemplate data={cvData} />
+    case 'fresh-graduate-minimal-v1': return <FreshGraduateMinimalTemplate data={cvData} />
+    case 'timeline-minimal-v1': return <TimelineMinimalTemplate data={cvData} />
+    case 'two-tone-minimal-v1': return <TwoToneMinimalTemplate data={cvData} />
     default: return <ATSCleanTemplate data={cvData} />
   }
 }
@@ -54,6 +66,7 @@ function Input({ label, value, onChange, placeholder, type = 'text' }) {
 export default function CVBuilderPage() {
   const navigate = useNavigate()
   const { id: editId } = useParams()
+  const [searchParams] = useSearchParams()
   const { currentStep, setStep, cvData, updateData, templateId, setTemplateId, title, setTitle, reset } = useCVStore()
   const { generateSummary, saveDraft, loadCV } = useCV()
   const syncFromCV = useProfileStore((s) => s.syncFromCV)
@@ -77,6 +90,10 @@ export default function CVBuilderPage() {
   useEffect(() => {
     if (!editId) {
       reset()
+      const tplParam = searchParams.get('template')
+      if (tplParam && ['ats-clean-v1', 'ats-modern-v1', 'modern-tech-v1', 'creative-v1', 'executive-v1', 'minimalist-v1', 'professional-v1', 'compact-v1', 'elegant-slate-v1', 'bold-impact-v1'].includes(tplParam)) {
+        setTemplateId(tplParam)
+      }
       setLoadingCV(false)
       return
     }
@@ -97,7 +114,7 @@ export default function CVBuilderPage() {
       }
     })()
     return () => { cancelled = true }
-  }, [editId, loadCV, reset, setTemplateId, setStep, syncFromCV])
+  }, [editId, loadCV, reset, setTemplateId, setStep, syncFromCV, searchParams])
 
   const handleGenerate = async (params) => {
     setGenerating(true)
@@ -179,7 +196,6 @@ export default function CVBuilderPage() {
         <Button variant="secondary" size="sm" onClick={() => setTemplateModal(true)} className="shrink-0">Ganti Template</Button>
       </div>
       <Input label="Judul CV" placeholder="CV Software Engineer 2026" value={title} onChange={(e) => { setDirty(true); setTitle(e.target.value) }} />
-      <TemplatePicker selected={templateId} onSelect={(id) => { setDirty(true); setTemplateId(id); setTemplateModal(false) }} />
     </div>,
   ]
 
@@ -237,43 +253,13 @@ export default function CVBuilderPage() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6">
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 pb-16">
           <div className="flex-1 card p-3 sm:p-4 lg:p-6">
             {loadingCV ? (
               <PageLoader text="Memuat CV..." />
             ) : (
               <>
                 {stepComponents[currentStep]}
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-4 sm:mt-6 lg:mt-8 pt-4 sm:pt-5 lg:pt-6 border-t border-border gap-2 sm:gap-3">
-                  <Button variant="ghost" onClick={handlePrev} className="order-2 sm:order-1">
-                    {currentStep === 0 ? 'Kembali ke Dashboard' : 'Sebelumnya'}
-                  </Button>
-                  {currentStep === steps.length - 1 && (
-                    <Button variant="ghost" onClick={handleDashboardClick} className="order-2 sm:order-1">
-                      Kembali ke Dashboard
-                    </Button>
-                  )}
-                  <div className="flex gap-2 order-1 sm:order-2">
-                    {currentStep === steps.length - 1 ? (
-                      <>
-                        <Button variant="secondary" loading={saving} onClick={handleSave} className="flex-1 sm:flex-none">
-                          {editId ? 'Simpan Perubahan' : 'Simpan Draft'}
-                        </Button>
-                        <PDFDownloadLink
-                          document={getTemplateComponent(templateId, cvData)}
-                          fileName={`${cvData.personal?.name?.replace(/\s+/g, '-') || 'CV'}-CV.pdf`}
-                        >
-                          {({ loading: pdfLoading }) => (
-                            <Button loading={pdfLoading} className="flex-1 sm:flex-none">{pdfLoading ? 'Menyiapkan...' : 'Download PDF'}</Button>
-                          )}
-                        </PDFDownloadLink>
-                      </>
-                    ) : (
-                      <Button onClick={handleNext} className="w-full sm:w-auto">{currentStep === steps.length - 2 ? 'Review & Final' : 'Selanjutnya'}</Button>
-                    )}
-                  </div>
-                </div>
               </>
             )}
           </div>
@@ -318,10 +304,44 @@ export default function CVBuilderPage() {
             </div>
           </div>
         </div>
+
+        {/* Fixed bottom action bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-[var(--card,#fff)] shadow-lg">
+          <div className="container-page py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
+            <div className="order-2 sm:order-1">
+              {currentStep === 0 ? (
+                <Button variant="ghost" onClick={handleDashboardClick}>Kembali ke Dashboard</Button>
+              ) : currentStep === steps.length - 1 ? (
+                <Button variant="ghost" onClick={handleDashboardClick}>Kembali ke Dashboard</Button>
+              ) : (
+                <Button variant="ghost" onClick={handlePrev}>Sebelumnya</Button>
+              )}
+            </div>
+            <div className="flex gap-2 order-1 sm:order-2">
+              {currentStep === steps.length - 1 ? (
+                <>
+                  <Button variant="secondary" loading={saving} onClick={handleSave} className="flex-1 sm:flex-none">
+                    {editId ? 'Simpan Perubahan' : 'Simpan Draft'}
+                  </Button>
+                  <PDFDownloadLink
+                    document={getTemplateComponent(templateId, cvData)}
+                    fileName={`${cvData.personal?.name?.replace(/\s+/g, '-') || 'CV'}-CV.pdf`}
+                  >
+                    {({ loading: pdfLoading }) => (
+                      <Button loading={pdfLoading} className="flex-1 sm:flex-none">{pdfLoading ? 'Menyiapkan...' : 'Download PDF'}</Button>
+                    )}
+                  </PDFDownloadLink>
+                </>
+              ) : (
+                <Button onClick={handleNext} className="w-full sm:w-auto">{currentStep === steps.length - 2 ? 'Review & Final' : 'Selanjutnya'}</Button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       <Modal open={templateModal} onClose={() => setTemplateModal(false)} title="Pilih Template" size="lg">
-        <TemplatePicker selected={templateId} onSelect={(id) => { setTemplateId(id); setTemplateModal(false) }} />
+        <TemplatePicker selected={templateId} onSelect={(id) => { setDirty(true); setTemplateId(id); setTemplateModal(false) }} />
       </Modal>
       <Modal open={showATSModal} onClose={() => setShowATSModal(false)} title="Skor ATS" size="lg">
         <ATSScorePanel data={cvData} noCard noPadding />

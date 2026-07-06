@@ -12,7 +12,15 @@ import JobAnalysisModal from '../../components/dashboard/JobAnalysisModal'
 import api from '../../services/api'
 import { pdf } from '@react-pdf/renderer'
 import { ATSCleanTemplate } from '../../components/cv/templates/ATSCleanTemplate'
-import { ATSModernTemplate } from '../../components/cv/templates/ATSModernTemplate'
+import { ATSModernMinimalTemplate } from '../../components/cv/templates/ATSModernMinimalTemplate'
+import { ExecutiveSerifTemplate } from '../../components/cv/templates/ExecutiveSerifTemplate'
+import { CompactOnePageTemplate } from '../../components/cv/templates/CompactOnePageTemplate'
+import { SidebarSlimTemplate } from '../../components/cv/templates/SidebarSlimTemplate'
+import { AcademicMinimalTemplate } from '../../components/cv/templates/AcademicMinimalTemplate'
+import { TechnicalMinimalTemplate } from '../../components/cv/templates/TechnicalMinimalTemplate'
+import { FreshGraduateMinimalTemplate } from '../../components/cv/templates/FreshGraduateMinimalTemplate'
+import { TimelineMinimalTemplate } from '../../components/cv/templates/TimelineMinimalTemplate'
+import { TwoToneMinimalTemplate } from '../../components/cv/templates/TwoToneMinimalTemplate'
 import { CoverLetterTemplate } from '../../components/letter/CoverLetterTemplate'
 import useToastStore from '../../store/toastStore'
 import DashboardRail from './DashboardRail'
@@ -188,9 +196,25 @@ const handleEdit = (doc) => {
  const cvData = cv.data || {}
  const templateId = cv.template_id || 'ats-clean-v1'
 
- const pdfDocument = templateId === 'ats-modern-v1'
- ? <ATSModernTemplate data={cvData} />
- : <ATSCleanTemplate data={cvData} />
+        const pdfDocument = templateId === 'ats-modern-minimal-v1'
+        ? <ATSModernMinimalTemplate data={cvData} />
+        : templateId === 'executive-serif-v1'
+        ? <ExecutiveSerifTemplate data={cvData} />
+        : templateId === 'compact-onepage-v1'
+        ? <CompactOnePageTemplate data={cvData} />
+        : templateId === 'sidebar-slim-v1'
+        ? <SidebarSlimTemplate data={cvData} />
+        : templateId === 'academic-minimal-v1'
+        ? <AcademicMinimalTemplate data={cvData} />
+        : templateId === 'technical-minimal-v1'
+        ? <TechnicalMinimalTemplate data={cvData} />
+        : templateId === 'fresh-graduate-minimal-v1'
+        ? <FreshGraduateMinimalTemplate data={cvData} />
+        : templateId === 'timeline-minimal-v1'
+        ? <TimelineMinimalTemplate data={cvData} />
+        : templateId === 'two-tone-minimal-v1'
+        ? <TwoToneMinimalTemplate data={cvData} />
+        : <ATSCleanTemplate data={cvData} />
 
  const blob = await pdf(pdfDocument).toBlob()
  const url = URL.createObjectURL(blob)

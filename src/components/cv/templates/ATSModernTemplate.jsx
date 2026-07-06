@@ -1,205 +1,161 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { formatDate, formatPeriod, getSkills } from './templateUtils'
 
-const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-
-function formatDate(value) {
-  if (!value || value === 'Sekarang') return value
-  const m = String(value).match(/^(\d{4})-(\d{2})$/)
-  if (m) {
-    const monthIdx = parseInt(m[2], 10) - 1
-    return `${monthNames[monthIdx] || m[2]} ${m[1]}`
-  }
-  return value
-}
-
-function formatPeriod(start, end, isCurrent) {
-  const s = formatDate(start)
-  const e = isCurrent ? 'Sekarang' : formatDate(end)
-  return `${s} – ${e}`
-}
-
-function getSkills(data) {
-  const tech = data.skills?.technical || []
-  const soft = data.skills?.soft || []
-  return {
-    technical: Array.isArray(tech) && tech.length > 0 && typeof tech[0] === 'string'
-      ? tech.map((t) => ({ name: t, level: null }))
-      : tech,
-    soft: Array.isArray(soft) && soft.length > 0 && typeof soft[0] === 'string' ? soft : data.skills?.interpersonal || [],
-  }
-}
+const navy = '#1E3A5F'
+const lightNavy = '#2B4F7E'
+const bgLight = '#F8FAFC'
 
 const styles = StyleSheet.create({
-  page: {
-    fontFamily: 'Helvetica',
-    fontSize: 10,
-    padding: 40,
-    color: '#000',
-  },
-  header: {
-    backgroundColor: '#1D4ED8',
-    margin: -40,
-    marginBottom: 20,
-    padding: 30,
-    paddingTop: 24,
-    paddingBottom: 18,
-  },
-  name: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 2, textAlign: 'center' },
-  jobTitle: { fontSize: 11, color: '#dbeafe', marginBottom: 6, textAlign: 'center' },
-  contactLine: { fontSize: 9, color: '#dbeafe', textAlign: 'center', lineHeight: 1.5 },
+  page: { fontFamily: 'Helvetica', fontSize: 10, padding: 0, color: '#1E293B' },
+  header: { backgroundColor: navy, padding: 28, paddingBottom: 18, marginBottom: 0 },
+  name: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'center', letterSpacing: 1, marginBottom: 4 },
+  jobTitle: { fontSize: 10, color: '#93C5FD', textAlign: 'center', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 },
+  contactRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', fontSize: 8, color: '#BFDBFE', gap: 3 },
+  contactItem: { marginHorizontal: 5 },
+  body: { padding: 36, paddingTop: 20 },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    color: '#1D4ED8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1D4ED8',
-    paddingBottom: 2,
-    marginTop: 14,
-    marginBottom: 6,
+    fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1.5,
+    color: navy, borderBottomWidth: 1.5, borderBottomColor: navy, paddingBottom: 3,
+    marginTop: 14, marginBottom: 8,
   },
-  bullet: { marginLeft: 12, marginBottom: 2, lineHeight: 1.4, fontSize: 10 },
-  expHeader: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 1 },
-  expPosition: { fontWeight: 'bold', fontSize: 10 },
-  expCompanyPeriod: { fontSize: 9, color: '#444', marginBottom: 2 },
-  eduRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 },
-  eduDegree: { fontWeight: 'bold', fontSize: 10 },
-  eduYear: { fontSize: 9, color: '#444' },
-  eduDetail: { fontSize: 9, color: '#333', marginBottom: 3 },
-  eduThesis: { fontSize: 9, color: '#555', fontStyle: 'italic', marginBottom: 3, marginLeft: 1 },
-  skillsRow: { flexDirection: 'row', marginBottom: 4 },
-  skillsCol: { flex: 1 },
-  skillsLabel: { fontWeight: 'bold', fontSize: 10, marginBottom: 2 },
-  skillItem: { fontSize: 9, lineHeight: 1.5, color: '#222' },
-  inlineDivider: { fontSize: 9, color: '#666' },
-  inlineRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
-  inlineItem: { fontSize: 9, color: '#333', lineHeight: 1.6 },
-  projRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 3, marginBottom: 1 },
-  projName: { fontWeight: 'bold', fontSize: 10 },
-  projYear: { fontSize: 9, color: '#444' },
-  projTech: { fontSize: 9, color: '#555', fontStyle: 'italic', marginBottom: 2 },
-  projDesc: { fontSize: 9, lineHeight: 1.3, color: '#333', marginBottom: 2 },
+  summary: { fontSize: 9.5, lineHeight: 1.6, color: '#334155', marginBottom: 4, fontStyle: 'italic' },
+  bul: { marginLeft: 10, marginBottom: 2, lineHeight: 1.4, fontSize: 9.5, color: '#334155' },
+  expHeader: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 1, alignItems: 'baseline' },
+  expPosition: { fontWeight: 'bold', fontSize: 10.5, color: navy },
+  expDate: { fontSize: 8, color: '#64748B' },
+  expCompany: { fontSize: 9, color: '#475569', marginBottom: 3, fontStyle: 'italic' },
+  eduRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1, alignItems: 'baseline' },
+  eduDegree: { fontWeight: 'bold', fontSize: 10, color: '#1E293B' },
+  eduYear: { fontSize: 8.5, color: '#64748B' },
+  eduDetail: { fontSize: 9, color: '#475569', marginBottom: 2 },
+  eduThesis: { fontSize: 8.5, color: '#64748B', fontStyle: 'italic', marginBottom: 3, marginLeft: 1 },
+  skillContainer: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: 2 },
+  skillItemWrapper: { width: '50%' },
+  skillItem: { marginBottom: 2, lineHeight: 1.4, fontSize: 9.5, color: '#334155' },
+  projRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 3, marginBottom: 1, alignItems: 'baseline' },
+  projName: { fontWeight: 'bold', fontSize: 10, color: navy },
+  projTech: { fontSize: 8, color: '#64748B', fontStyle: 'italic', marginBottom: 1 },
+  projDesc: { fontSize: 9, color: '#334155', lineHeight: 1.3, marginBottom: 2 },
+  certItem: { fontSize: 8.5, color: '#334155', marginBottom: 1 },
+  langItem: { fontSize: 8.5, color: '#334155', lineHeight: 1.5 },
 })
 
 export function ATSModernTemplate({ data }) {
   const skills = getSkills(data)
+  const p = data.personal || {}
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.name}>{data.personal?.name || ''}</Text>
-          {data.personal?.jobTitle && <Text style={styles.jobTitle}>{data.personal.jobTitle}</Text>}
-          <Text style={styles.contactLine}>
-            {[data.personal?.city, data.personal?.phone, data.personal?.email].filter(Boolean).join(' | ')}
-          </Text>
-          <Text style={styles.contactLine}>
-            {[data.personal?.linkedin, data.personal?.github, data.personal?.portfolio].filter(Boolean).join(' | ')}
-          </Text>
+          <Text style={styles.name}>{p.name || ''}</Text>
+          {p.jobTitle && <Text style={styles.jobTitle}>{p.jobTitle}</Text>}
+          <View style={styles.contactRow}>
+            {[p.email, p.phone, p.city].filter(Boolean).map((c, i) => (
+              <Text key={i} style={styles.contactItem}>{c}</Text>
+            ))}
+          </View>
+          <View style={{ marginTop: 4, ...styles.contactRow }}>
+            {[p.linkedin, p.github, p.portfolio].filter(Boolean).map((c, i) => (
+              <Text key={i} style={styles.contactItem}>{c}</Text>
+            ))}
+          </View>
         </View>
 
-        {data.summary && (
-          <View>
-            <Text style={styles.sectionTitle}>Ringkasan Profil</Text>
-            <Text style={{ lineHeight: 1.4, fontSize: 10, marginBottom: 2 }}>{data.summary}</Text>
-          </View>
-        )}
+        <View style={styles.body}>
+          {data.summary && (
+            <View>
+              <Text style={styles.sectionTitle}>Ringkasan Profesional</Text>
+              <Text style={styles.summary}>{data.summary}</Text>
+            </View>
+          )}
 
-        {data.experiences?.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>Pengalaman Kerja</Text>
-            {data.experiences.map((exp, i) => (
-              <View key={i} style={{ marginBottom: 7 }}>
-                <View style={styles.expHeader}>
-                  <Text style={styles.expPosition}>{exp.position}</Text>
+          {data.experiences?.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>Pengalaman Kerja</Text>
+              {data.experiences.map((exp, i) => (
+                <View key={i} style={{ marginBottom: 8 }}>
+                  <View style={styles.expHeader}>
+                    <Text style={styles.expPosition}>{exp.position}</Text>
+                    <Text style={styles.expDate}>{formatPeriod(exp.startDate || exp.start_date, exp.endDate || exp.end_date, exp.isCurrent)}</Text>
+                  </View>
+                  <Text style={styles.expCompany}>{exp.company}</Text>
+                  {(exp.description || []).map((point, j) => (
+                    <Text key={j} style={styles.bul}>• {point}</Text>
+                  ))}
                 </View>
-                <Text style={styles.expCompanyPeriod}>
-                  {exp.company} — {formatPeriod(exp.startDate || exp.start_date, exp.endDate || exp.end_date, exp.isCurrent)}
-                </Text>
-                {(exp.description || []).map((point, j) => (
-                  <Text key={j} style={styles.bullet}>• {point}</Text>
-                ))}
-              </View>
-            ))}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
 
-        {data.educations?.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>Pendidikan</Text>
-            {data.educations.map((edu, i) => (
-              <View key={i} style={{ marginBottom: 5 }}>
-                <View style={styles.eduRow}>
-                  <Text style={styles.eduDegree}>{edu.degree} — {edu.institution}</Text>
-                  <Text style={styles.eduYear}>{edu.startYear || edu.start_year} – {edu.endYear || edu.end_year || 'Sekarang'}</Text>
+          {data.educations?.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>Pendidikan</Text>
+              {data.educations.map((edu, i) => (
+                <View key={i} style={{ marginBottom: 5 }}>
+                  <View style={styles.eduRow}>
+                    <Text style={styles.eduDegree}>{edu.degree}, {edu.field}</Text>
+                    <Text style={styles.eduYear}>{edu.startYear || edu.start_year} – {edu.endYear || edu.end_year || 'Sekarang'}</Text>
+                  </View>
+                  <Text style={styles.eduDetail}>{edu.institution}{edu.gpa ? ` — IPK: ${edu.gpa}` : ''}</Text>
+                  {edu.thesis && <Text style={styles.eduThesis}>Tugas Akhir: {edu.thesis}</Text>}
                 </View>
-                <Text style={styles.eduDetail}>{edu.field}{edu.gpa ? `, IPK: ${edu.gpa}` : ''}</Text>
-                {edu.thesis && <Text style={styles.eduThesis}>Tugas Akhir: {edu.thesis}</Text>}
-              </View>
-            ))}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
 
-        {(skills.technical.length > 0 || skills.soft.length > 0) && (
-          <View>
-            <Text style={styles.sectionTitle}>Keahlian</Text>
-            <View style={styles.skillsRow}>
-              <View style={styles.skillsCol}>
-                <Text style={styles.skillsLabel}>Keahlian Teknis</Text>
+          {skills.technical.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>Keahlian</Text>
+              <View style={styles.skillContainer}>
                 {skills.technical.map((s, i) => (
-                  <Text key={i} style={styles.skillItem}>
-                    • {s.name}{s.level ? ` (${s.level})` : ''}
-                  </Text>
+                  <View key={`t-${i}`} style={styles.skillItemWrapper}>
+                    <Text style={styles.skillItem}>• {typeof s === 'string' ? s : s.name}</Text>
+                  </View>
                 ))}
-              </View>
-              <View style={styles.skillsCol}>
-                {skills.soft.length > 0 && <Text style={styles.skillsLabel}>Interpersonal</Text>}
                 {skills.soft.map((s, i) => (
-                  <Text key={i} style={styles.skillItem}>• {s}</Text>
+                  <View key={`s-${i}`} style={styles.skillItemWrapper}>
+                    <Text style={styles.skillItem}>• {typeof s === 'string' ? s : s.name || s}</Text>
+                  </View>
                 ))}
               </View>
             </View>
-          </View>
-        )}
+          )}
 
-        {((data.certifications?.length > 0) || (data.languages?.length > 0)) && (
-          <View>
-            <Text style={styles.sectionTitle}>Bahasa & Sertifikasi</Text>
-            <View style={styles.inlineRow}>
-              {data.languages?.length > 0 && (
-                <Text style={styles.inlineItem}>
-                  Bahasa: {data.languages.map((l) => `${l.name}${l.level ? ` (${l.level})` : ''}`).join(', ')}
-                </Text>
-              )}
-              {data.languages?.length > 0 && data.certifications?.length > 0 && (
-                <Text style={[styles.inlineItem, { marginHorizontal: 4 }]}>|</Text>
-              )}
-              {data.certifications?.length > 0 && (
-                <Text style={styles.inlineItem}>
-                  Sertifikasi: {data.certifications.map((c) => c.name + (c.issuer ? ` — ${c.issuer}` : '')).join(', ')}
-                </Text>
-              )}
+          {data.certifications?.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>Sertifikasi</Text>
+              {data.certifications.map((c, i) => (
+                <Text key={i} style={styles.certItem}>• {c.name}{c.issuer ? ` — ${c.issuer}` : ''}{c.date ? ` (${formatDate(c.date)})` : ''}</Text>
+              ))}
             </View>
-          </View>
-        )}
+          )}
 
-        {data.projects?.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>Proyek & Portofolio</Text>
-            {data.projects.map((proj, i) => (
-              <View key={i} style={{ marginBottom: 5 }}>
-                <View style={styles.projRow}>
-                  <Text style={styles.projName}>{proj.name}</Text>
-                  <Text style={styles.projYear}>{proj.period || formatPeriod(proj.startDate, proj.endDate, false)}</Text>
+          {data.languages?.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>Bahasa</Text>
+              <Text style={styles.langItem}>{data.languages.map((l) => `${l.name}${l.level ? ` — ${l.level}` : ''}`).join('  •  ')}</Text>
+            </View>
+          )}
+
+          {data.projects?.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>Proyek</Text>
+              {data.projects.map((proj, i) => (
+                <View key={i} style={{ marginBottom: 5 }}>
+                  <View style={styles.projRow}>
+                    <Text style={styles.projName}>{proj.name}</Text>
+                    {proj.period && <Text style={styles.projTech}>{proj.period}</Text>}
+                  </View>
+                  {(proj.techStack || proj.tech_stack)?.length > 0 && (
+                    <Text style={styles.projTech}>{(proj.techStack || proj.tech_stack).join(', ')}</Text>
+                  )}
+                  {proj.description && <Text style={styles.projDesc}>{proj.description}</Text>}
                 </View>
-                {(proj.techStack || proj.tech_stack)?.length > 0 && (
-                  <Text style={styles.projTech}>Teknologi: {(proj.techStack || proj.tech_stack).join(', ')}</Text>
-                )}
-                {proj.description && <Text style={styles.projDesc}>{proj.description}</Text>}
-              </View>
-            ))}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
+        </View>
       </Page>
     </Document>
   )
