@@ -271,3 +271,173 @@ export async function getPurchaseStatus(req, res) {
     res.status(500).json({ error: 'Gagal membaca status pembayaran' });
   }
 }
+
+/** Core API auth header */
+function coreAuth() {
+  return 'Basic ' + Buffer.from(config.midtrans.serverKey + ':').toString('base64');
+}
+
+/** Build Midtrans Core API charge payload per payment method */
+function methodConfig(paymentMethod) {
+  const map = {
+    bca_va:     { paymentType: 'bank_transfer', bank: 'bca' },
+    bni_va:     { paymentType: 'bank_transfer', bank: 'bni' },
+    bri_va:     { paymentType: 'bank_transfer', bank: 'bri' },
+    permata_va: { paymentType: 'bank_transfer', bank: 'permata' },
+    mandiri_va: { paymentType: 'echannel',       bank: null },
+    gopay:      { paymentType: 'gopay',          bank: null },
+  };
+  return map[paymentMethod];
+}
+
+function paymentCategory(method) {
+  const cfg = methodConfig(method);
+  if (!cfg) return null;
+  return cfg.paymentType === 'echannel' ? 'echannel'
+    : cfg.paymentType === 'gopay' ? 'gopay'
+    : 'bank_transfer';
+}
+
+function buildChargePayload(orderId, grossAmount, paymentMethod) {
+  const cfg = methodConfig(paymentMethod);
+  if (!cfg) throw new Error(`Metode pembayaran ${paymentMethod} tidak didukung`);
+
+  const base = {
+    transaction_details: { order_id: orderId, gross_amount: grossAmount },
+    item_details: [
+      { id: orderId, price: grossAmount, quantity: 1, name: `${grossAmount < 20000 ? 'Starter' : grossAmount < 50000 ? 'Popular' : 'Pro'} Token AI`, category: 'Token' },
+    ],
+    customer_details: {},
+    payment_type: cfg.paymentType,
+  };
+
+  if (cfg.paymentType === 'bank_transfer') {
+    base.bank_transfer = { bank: cfg.bank };
+  } else if (cfg.paymentType === 'echannel') {
+    base.echannel = { bill_info1: 'Pembayaran Token AI', bill_info2: 'GenCV' };
+  }
+
+  return base;
+}
+
+function parseChargeResponse(method, midtransResp) {
+  const txId = midtransResp.transaction_id;
+  const status = midtransResp.transaction_status;
+  const cfg = methodConfig(method);
+  const cat = paymentCategory(method);
+
+  const instructions = { txId, status, type: cat, bank: cfg?.bank || null };
+
+  if (cat === 'bank_transfer') {
+    if (midtransResp.va_numbers?.length) {
+      instructions.vaNumber = midtransResp.va_numbers[0].va_number;
+      instructions.bank = midtransResp.va_numbers[0].bank;
+    }
+    if (midtransResp.permata_va_number) {
+      instructions.vaNumber = midtransResp.permata_va_number;
+      instructions.bank = 'permata';
+    }
+  }
+
+  if (cat === 'echannel') {
+    if (midtransResp.bill_key) {
+      instructions.vaNumber = midtransResp.bill_key;
+      instructions.billCode = midtransResp.biller_code;
+    }
+  }
+
+  if (cat === 'gopay') {
+    const qrAction = (midtransResp.actions || []).find(a => a.name === 'generate-qr-code');
+    instructions.qrUrl = qrAction?.url || null;
+    instructions.deepLink = (midtransResp.actions || []).find(a => a.name === 'deeplink-redirect')?.url || null;
+  }
+
+  return instructions;
+}
+
+
+
+/** POST /api/tokens/charge — create purchase + charge via Midtrans Core API */
+/** Static package map — no DB call needed */
+const PACKAGES = {
+  starter: { tokens: 10, price: 15000 },
+  popular: { tokens: 25, price: 30000 },
+  pro:     { tokens: 60, price: 60000 },
+};
+
+/** POST /api/tokens/charge — create purchase + charge via Midtrans Core API */
+export async function createCharge(req, res) {
+  const { package_id, payment_method } = req.body;
+  if (!package_id) return res.status(400).json({ error: 'package_id wajib diisi' });
+  if (!payment_method) return res.status(400).json({ error: 'payment_method wajib diisi' });
+
+  const supported = ['bca_va', 'bni_va', 'bri_va', 'mandiri_va', 'permata_va', 'gopay'];
+  if (!supported.includes(payment_method)) {
+    return res.status(400).json({ error: `Metode ${payment_method} tidak didukung` });
+  }
+
+  const pkg = PACKAGES[package_id];
+  if (!pkg) return res.status(404).json({ error: 'Paket token tidak ditemukan' });
+
+  try {
+    // Generate order_id (sync, fast)
+    const short = req.user.id.replace(/-/g, '').slice(0, 8);
+    const ts = Date.now().toString(36);
+    const rand = Math.random().toString(36).slice(2, 6);
+    const orderId = `GENCV-${short}-${ts}-${rand}`;
+
+    // Call Midtrans Core API
+    const chargePayload = buildChargePayload(orderId, pkg.price, payment_method);
+    const coreResp = await fetch(`${config.midtrans.coreApiUrl}/charge`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: coreAuth(),
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(chargePayload),
+    });
+
+    const coreData = await coreResp.json();
+    if (!coreResp.ok) {
+      console.error('Midtrans Core API error:', coreResp.status, JSON.stringify(coreData));
+      return res.status(502).json({
+        error: 'Gagal membuat pembayaran',
+        detail: coreData.status_message || 'Midtrans error',
+      });
+    }
+
+    // Save payment_transactions (fire-and-forget — don't block response)
+    fetch(dbUrl('payment_transactions'), {
+      method: 'POST',
+      headers: { ...serviceHeaders, Prefer: 'return=representation' },
+      body: JSON.stringify({
+        user_id: req.user.id,
+        order_id: orderId,
+        package_id,
+        tokens: pkg.tokens,
+        amount: pkg.price,
+        status: 'pending',
+        midtrans_transaction_id: coreData.transaction_id,
+        payment_method,
+        raw_response: coreData,
+      }),
+    }).catch(err => console.error('Failed to save payment_transactions:', err));
+
+    const instructions = parseChargeResponse(payment_method, coreData);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        order_id: orderId,
+        payment_method,
+        amount: pkg.price,
+        tokens: pkg.tokens,
+        ...instructions,
+      },
+    });
+  } catch (err) {
+    console.error('createCharge error:', err);
+    res.status(500).json({ error: 'Gagal membuat pembayaran' });
+  }
+}

@@ -15,6 +15,9 @@ export const config = {
   midtrans: {
     serverKey: process.env.MIDTRANS_SERVER_KEY,
     isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+    coreApiUrl: process.env.MIDTRANS_IS_PRODUCTION === 'true'
+      ? 'https://api.midtrans.com/v2'
+      : 'https://api.sandbox.midtrans.com/v2',
     snapUrl: process.env.MIDTRANS_IS_PRODUCTION === 'true'
       ? 'https://app.midtrans.com/snap/v1/transactions'
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions',

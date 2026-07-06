@@ -5,6 +5,7 @@ import {
   listPackages,
   createPurchase,
   confirmPurchase,
+  createCharge,
   getPurchaseStatus,
 } from '../controllers/tokenController.js';
 
@@ -14,6 +15,7 @@ router.use(requireAuth);
 
 router.get('/balance', getBalance);
 router.get('/packages', listPackages);
+router.post('/charge', createCharge);
 router.post('/purchase', createPurchase);
 router.post('/confirm', confirmPurchase);
 router.get('/purchase/:orderId/status', getPurchaseStatus);
