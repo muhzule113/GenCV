@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
 import useAuthStore from '../../store/authStore'
+import useMidtransSnap from '../../hooks/useMidtransSnap'
 import Button from '../../components/common/Button'
 
 const packages = [
@@ -23,17 +24,36 @@ export default function TokensPage() {
     fetchTokenBalance()
   }, [fetchTokenBalance])
 
+  const { pay: snapPay, loading: snapLoading, error: snapError, clearError: clearSnapError } = useMidtransSnap()
+
   const handlePurchase = async (pkg) => {
     setPurchasing(true)
     setSelectedPkg(pkg.id)
+    clearSnapError()
+
     try {
       const { data } = await api.post('/api/tokens/purchase', { package_id: pkg.id })
       if (data?.success) {
-        // Payment gateway integration placeholder
-        // For now, auto-confirm
-        const confirmRes = await api.post('/api/tokens/confirm', { purchase_id: data.data.id })
-        if (confirmRes.data?.success) {
-          await fetchTokenBalance()
+        const { snap_token, order_id, id: purchase_id } = data.data
+
+        if (snap_token) {
+          // Open Midtrans Snap popup
+          const snapResult = await snapPay(snap_token)
+
+          if (snapResult.status === 'success' || snapResult.status === 'pending') {
+            // Payment initiated — poll for token balance update
+            // Wait a moment then fetch updated balance
+            setTimeout(async () => {
+              await fetchTokenBalance()
+            }, 3000)
+          }
+          // on error or closed, user can retry
+        } else {
+          // Fallback: legacy confirm flow (no Midtrans)
+          const confirmRes = await api.post('/api/tokens/confirm', { purchase_id })
+          if (confirmRes.data?.success) {
+            await fetchTokenBalance()
+          }
         }
       }
     } catch (err) {
@@ -105,6 +125,18 @@ export default function TokensPage() {
             </ul>
           </div>
 
+          {/* Midtrans error */}
+          {snapError && (
+            <div className="mb-6 p-4 rounded-lg bg-danger/10 border border-danger/20 text-sm text-danger">
+              {snapError}
+            </div>
+          )}
+          {/* Midtrans loading overlay */}
+          {snapLoading && (
+            <div className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20 text-sm text-primary text-center">
+              Membuka halaman pembayaran...
+            </div>
+          )}
           {/* Package grid */}
           <div className="grid gap-4">
             {packages.map((pkg) => (

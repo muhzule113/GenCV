@@ -12,6 +12,13 @@ export const config = {
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY,
   },
+  midtrans: {
+    serverKey: process.env.MIDTRANS_SERVER_KEY,
+    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+    snapUrl: process.env.MIDTRANS_IS_PRODUCTION === 'true'
+      ? 'https://app.midtrans.com/snap/v1/transactions'
+      : 'https://app.sandbox.midtrans.com/snap/v1/transactions',
+  },
   cors: {
     clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   },

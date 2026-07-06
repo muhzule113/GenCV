@@ -13,6 +13,7 @@ import cvRoutes from './routes/cvRoutes.js';
 import letterRoutes from './routes/letterRoutes.js';
 import templateRoutes from './routes/templateRoutes.js';
 import tokenRoutes from './routes/tokenRoutes.js';
+import midtransRoutes from './routes/midtransRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 
 Sentry.init({
@@ -67,9 +68,9 @@ app.get('/api-docs.json', (req, res) => {
 app.use('/api/cv', cvRoutes);
 app.use('/api/letter', letterRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/midtrans', midtransRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/profile', profileRoutes);
-
 app.use(Sentry.expressErrorHandler());
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', { error: err.message, stack: err.stack });
