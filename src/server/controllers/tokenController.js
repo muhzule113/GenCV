@@ -236,36 +236,69 @@ export async function confirmPurchase(req, res) {
 }
 
 /** GET /api/tokens/purchase/:orderId/status */
+/** GET /api/tokens/purchase/:orderId/status — with Midtrans Core API fallback */
 export async function getPurchaseStatus(req, res) {
   const { orderId } = req.params;
-  if (!orderId) {
-    return res.status(400).json({ error: 'order_id wajib diisi' });
-  }
+  if (!orderId) return res.status(400).json({ error: 'order_id wajib diisi' });
 
   try {
-    const resp = await fetch(
+    // 1. Cek DB dulu (fast path)
+    const dbResp = await fetch(
       `${dbUrl('payment_transactions')}?order_id=eq.${orderId}&user_id=eq.${req.user.id}&select=status,tokens,midtrans_transaction_id,payment_method,settled_at,created_at`,
       { headers: serviceHeaders },
     );
-    if (!resp.ok) {
-      return res.status(500).json({ error: 'Gagal membaca status pembayaran' });
-    }
-    const data = await resp.json();
-    const tx = Array.isArray(data) ? data[0] : null;
-    if (!tx) {
-      return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
+    if (!dbResp.ok) return res.status(500).json({ error: 'Gagal membaca status pembayaran' });
+    const dbData = await dbResp.json();
+    const tx = Array.isArray(dbData) ? dbData[0] : null;
+    if (!tx) return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
+
+    // Kalo udah settlement langsung balikin
+    if (tx.status === 'settlement') {
+      return res.json({ success: true, data: { status: 'settlement', tokens: tx.tokens, paymentMethod: tx.payment_method, settledAt: tx.settled_at, createdAt: tx.created_at } });
     }
 
-    res.json({
-      success: true,
-      data: {
-        status: tx.status,
-        tokens: tx.tokens,
-        paymentMethod: tx.payment_method,
-        settledAt: tx.settled_at,
-        createdAt: tx.created_at,
-      },
+    // 2. Kalo masih pending, cek langsung ke Midtrans Core API (self-healing)
+    const coreResp = await fetch(`${config.midtrans.coreApiUrl}/${orderId}/status`, {
+      method: 'GET',
+      headers: { Authorization: coreAuth(), Accept: 'application/json' },
     });
+
+    const mtStatus = coreResp.ok ? await coreResp.json() : null;
+    const midtransOk = mtStatus && mtStatus.status_code !== '404' && mtStatus.transaction_status;
+
+    if (midtransOk) {
+      const ts = mtStatus.transaction_status;
+
+      if (ts === 'settlement' || ts === 'capture') {
+        // Kredit token lewat RPC (sama kaya webhook)
+        const rpcResp = await fetch(rpcUrl('credit_tokens'), {
+          method: 'POST',
+          headers: { ...serviceHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            p_order_id: orderId,
+            p_midtrans_tx_id: mtStatus.transaction_id,
+            p_payment_method: mtStatus.payment_type,
+            p_raw: JSON.stringify(mtStatus),
+          }),
+        });
+
+        if (rpcResp.ok) {
+          return res.json({ success: true, data: { status: 'settlement', tokens: tx.tokens, paymentMethod: mtStatus.payment_type, settledAt: new Date().toISOString(), createdAt: tx.created_at } });
+        }
+      }
+
+      // Update DB kalo failed/expired
+      if (['deny', 'cancel', 'expire', 'failure'].includes(ts)) {
+        fetch(`${dbUrl('payment_transactions')}?order_id=eq.${orderId}`, {
+          method: 'PATCH',
+          headers: serviceHeaders,
+          body: JSON.stringify({ status: ts === 'expire' ? 'expired' : 'denied' }),
+        }).catch(() => {});
+      }
+    }
+
+    // Balikin status dari DB
+    return res.json({ success: true, data: { status: tx.status, tokens: tx.tokens, paymentMethod: tx.payment_method, createdAt: tx.created_at } });
   } catch (err) {
     console.error('getPurchaseStatus error:', err);
     res.status(500).json({ error: 'Gagal membaca status pembayaran' });
