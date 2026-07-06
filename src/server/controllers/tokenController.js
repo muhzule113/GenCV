@@ -234,3 +234,40 @@ export async function confirmPurchase(req, res) {
     res.status(500).json({ error: 'Gagal mengkonfirmasi pembayaran' });
   }
 }
+
+/** GET /api/tokens/purchase/:orderId/status */
+export async function getPurchaseStatus(req, res) {
+  const { orderId } = req.params;
+  if (!orderId) {
+    return res.status(400).json({ error: 'order_id wajib diisi' });
+  }
+
+  try {
+    const resp = await fetch(
+      `${dbUrl('payment_transactions')}?order_id=eq.${orderId}&user_id=eq.${req.user.id}&select=status,tokens,midtrans_transaction_id,payment_method,settled_at,created_at`,
+      { headers: serviceHeaders },
+    );
+    if (!resp.ok) {
+      return res.status(500).json({ error: 'Gagal membaca status pembayaran' });
+    }
+    const data = await resp.json();
+    const tx = Array.isArray(data) ? data[0] : null;
+    if (!tx) {
+      return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        status: tx.status,
+        tokens: tx.tokens,
+        paymentMethod: tx.payment_method,
+        settledAt: tx.settled_at,
+        createdAt: tx.created_at,
+      },
+    });
+  } catch (err) {
+    console.error('getPurchaseStatus error:', err);
+    res.status(500).json({ error: 'Gagal membaca status pembayaran' });
+  }
+}

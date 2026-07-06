@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
 import useAuthStore from '../../store/authStore'
 import useMidtransSnap from '../../hooks/useMidtransSnap'
 import Button from '../../components/common/Button'
+import WaitingPayment from './WaitingPayment'
+
+const PAYMENT_EXPIRY_MS = 3 * 60 * 1000 // 3 menit
 
 const packages = [
   { id: 'starter', name: 'Starter Pack', tokens: 10, price: 15000, desc: 'Cocok untuk percobaan' },
@@ -17,16 +20,70 @@ export default function TokensPage() {
   const { tokenBalance, fetchTokenBalance } = useAuthStore()
   const [selectedPkg, setSelectedPkg] = useState(null)
   const [purchasing, setPurchasing] = useState(false)
+  const [paymentPending, setPaymentPending] = useState(null)
+  const [showOverlay, setShowOverlay] = useState(false)
+  const expiryTimer = useRef(null)
+  const countdownTimer = useRef(null)
+  const [remaining, setRemaining] = useState(PAYMENT_EXPIRY_MS)
 
   const insufficient = searchParams.get('insufficient') === '1'
+
+  const { pay: snapPay, loading: snapLoading, error: snapError, clearError: clearSnapError } = useMidtransSnap()
 
   useEffect(() => {
     fetchTokenBalance()
   }, [fetchTokenBalance])
 
-  const { pay: snapPay, loading: snapLoading, error: snapError, clearError: clearSnapError } = useMidtransSnap()
+  /* ── Cleanup on unmount ── */
+  useEffect(() => {
+    return () => {
+      clearTimeout(expiryTimer.current)
+      clearInterval(countdownTimer.current)
+    }
+  }, [])
 
+  /* ── Helpers ── */
+  const openSnap = (snapToken) => {
+    clearSnapError()
+    snapPay(snapToken).catch(() => {})
+  }
+
+  const startPayment = ({ order_id, snap_token, pkg }) => {
+    const expiresAt = Date.now() + PAYMENT_EXPIRY_MS
+    setPaymentPending({ order_id, pkg, snap_token, expires_at: expiresAt })
+    setShowOverlay(true)
+
+    clearTimeout(expiryTimer.current)
+    expiryTimer.current = setTimeout(() => {
+      setPaymentPending(null)
+      setShowOverlay(false)
+      clearInterval(countdownTimer.current)
+    }, PAYMENT_EXPIRY_MS)
+
+    clearInterval(countdownTimer.current)
+    countdownTimer.current = setInterval(() => {
+      const left = Math.max(0, expiresAt - Date.now())
+      setRemaining(left)
+      if (left <= 0) {
+        clearInterval(countdownTimer.current)
+      }
+    }, 1000)
+  }
+
+  const clearPayment = () => {
+    setPaymentPending(null)
+    setShowOverlay(false)
+    clearTimeout(expiryTimer.current)
+    clearInterval(countdownTimer.current)
+  }
+
+  /* ── Handlers ── */
   const handlePurchase = async (pkg) => {
+    if (paymentPending) {
+      alert('Silahkan selesaikan pembayaran yang ada terlebih dahulu')
+      return
+    }
+
     setPurchasing(true)
     setSelectedPkg(pkg.id)
     clearSnapError()
@@ -34,26 +91,10 @@ export default function TokensPage() {
     try {
       const { data } = await api.post('/api/tokens/purchase', { package_id: pkg.id })
       if (data?.success) {
-        const { snap_token, order_id, id: purchase_id } = data.data
-
+        const { snap_token, order_id } = data.data
         if (snap_token) {
-          // Open Midtrans Snap popup
-          const snapResult = await snapPay(snap_token)
-
-          if (snapResult.status === 'success' || snapResult.status === 'pending') {
-            // Payment initiated — poll for token balance update
-            // Wait a moment then fetch updated balance
-            setTimeout(async () => {
-              await fetchTokenBalance()
-            }, 3000)
-          }
-          // on error or closed, user can retry
-        } else {
-          // Fallback: legacy confirm flow (no Midtrans)
-          const confirmRes = await api.post('/api/tokens/confirm', { purchase_id })
-          if (confirmRes.data?.success) {
-            await fetchTokenBalance()
-          }
+          openSnap(snap_token)
+          startPayment({ order_id, snap_token, pkg })
         }
       }
     } catch (err) {
@@ -62,6 +103,25 @@ export default function TokensPage() {
       setPurchasing(false)
       setSelectedPkg(null)
     }
+  }
+
+  const handlePaymentSuccess = async () => {
+    await fetchTokenBalance()
+  }
+
+  const handleCancelPayment = () => {
+    clearPayment()
+  }
+
+  const handlePayNow = (snapToken) => {
+    openSnap(snapToken)
+    setShowOverlay(true)
+  }
+
+  const formatCountdown = (ms) => {
+    const m = Math.floor(ms / 60000)
+    const s = Math.floor((ms % 60000) / 1000)
+    return `${m}:${s.toString().padStart(2, '0')}`
   }
 
   return (
@@ -104,39 +164,41 @@ export default function TokensPage() {
             <ul className="space-y-1.5 text-sm text-muted">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                Generate ringkasan CV — 1 token
+                Generate ringkasan CV &mdash; 1 token
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                Generate surat lamaran — 1 token
+                Generate surat lamaran &mdash; 1 token
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                Rekomendasi skill — 1 token
+                Rekomendasi skill &mdash; 1 token
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                Analisis kecocokan lowongan — 1 token
+                Analisis kecocokan lowongan &mdash; 1 token
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                Import CV via OCR — 1 token
+                Import CV via OCR &mdash; 1 token
               </li>
             </ul>
           </div>
 
-          {/* Midtrans error */}
+          {/* Snap error */}
           {snapError && (
             <div className="mb-6 p-4 rounded-lg bg-danger/10 border border-danger/20 text-sm text-danger">
               {snapError}
             </div>
           )}
-          {/* Midtrans loading overlay */}
+
+          {/* Snap loading */}
           {snapLoading && (
             <div className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20 text-sm text-primary text-center">
               Membuka halaman pembayaran...
             </div>
           )}
+
           {/* Package grid */}
           <div className="grid gap-4">
             {packages.map((pkg) => (
@@ -188,6 +250,36 @@ export default function TokensPage() {
           </p>
         </div>
       </div>
+
+      {/* Floating badge (when minimized) */}
+      {paymentPending && !showOverlay && (
+        <button
+          onClick={() => setShowOverlay(true)}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 transition-all"
+        >
+          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span className="text-sm font-medium">Menunggu Pembayaran</span>
+          <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">
+            {formatCountdown(remaining)}
+          </span>
+        </button>
+      )}
+
+      {/* WaitingPayment overlay */}
+      {paymentPending && showOverlay && (
+        <WaitingPayment
+          orderId={paymentPending.order_id}
+          pkg={paymentPending.pkg}
+          snapToken={paymentPending.snap_token}
+          onPayNow={handlePayNow}
+          onMinimize={() => setShowOverlay(false)}
+          onSuccess={handlePaymentSuccess}
+          onCancel={handleCancelPayment}
+        />
+      )}
     </div>
   )
 }

@@ -5,6 +5,7 @@ import {
   listPackages,
   createPurchase,
   confirmPurchase,
+  getPurchaseStatus,
 } from '../controllers/tokenController.js';
 
 const router = Router();
@@ -15,5 +16,6 @@ router.get('/balance', getBalance);
 router.get('/packages', listPackages);
 router.post('/purchase', createPurchase);
 router.post('/confirm', confirmPurchase);
+router.get('/purchase/:orderId/status', getPurchaseStatus);
 
 export default router;
