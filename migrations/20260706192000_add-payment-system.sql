@@ -115,11 +115,11 @@ BEGIN
   INSERT INTO token_ledger (user_id, delta, reason, tx_id)
   VALUES (v_user_id, v_tokens, 'topup:' || p_order_id, v_tx_id);
 
-  -- Add tokens to user balance
+  -- Add tokens to user balance (table-qualified to avoid ambiguity with RETURNS TABLE)
   RETURN QUERY
   UPDATE user_tokens
-  SET balance = balance + v_tokens, updated_at = NOW()
+  SET balance = user_tokens.balance + v_tokens, updated_at = NOW()
   WHERE user_id = v_user_id
-  RETURNING balance;
+  RETURNING user_tokens.balance;
 END;
 $$;
