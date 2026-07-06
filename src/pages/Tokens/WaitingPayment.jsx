@@ -198,10 +198,10 @@ export default function WaitingPayment({
           <div className="bg-sheet rounded-xl p-5 mb-5 text-left">
             <div className="text-sm text-muted mb-1">Nomor Virtual Account</div>
             <div
-              className="flex items-center justify-between gap-2 bg-white rounded-lg px-4 py-3 border border-border cursor-pointer hover:border-clip transition-colors"
+              className="flex items-center justify-between gap-2 bg-white rounded-lg px-4 py-3 border border-border cursor-pointer hover:border-clip transition-colors overflow-hidden"
               onClick={() => handleCopy(vaNumber || billCode)}
             >
-              <span className="text-lg font-bold font-mono text-ink tracking-wider">
+              <span className="text-lg font-bold font-mono text-ink tracking-wider truncate min-w-0">
                 {vaNumber || billCode}
               </span>
               <span className={`text-xs font-medium px-2 py-1 rounded shrink-0 ${copied ? 'bg-green-100 text-green-700' : 'bg-clip/10 text-clip'}`}>
