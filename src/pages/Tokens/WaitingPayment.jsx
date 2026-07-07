@@ -89,8 +89,8 @@ export default function WaitingPayment({
         return true
       }
 
-      if (['deny', 'cancel', 'expire', 'failure'].includes(tx.status)) {
-        setError(`Pembayaran ${tx.status}`)
+      if (['deny', 'cancel', 'expire', 'failure', 'expired'].includes(tx.status)) {
+        setError(tx.status === 'expired' ? 'Pembayaran kadaluwarsa' : `Pembayaran ${tx.status}`)
         return false
       }
 

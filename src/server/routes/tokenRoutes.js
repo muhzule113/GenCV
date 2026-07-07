@@ -7,6 +7,7 @@ import {
   confirmPurchase,
   createCharge,
   getPurchaseStatus,
+  expirePurchase,
 } from '../controllers/tokenController.js';
 
 const router = Router();
@@ -19,5 +20,5 @@ router.post('/charge', createCharge);
 router.post('/purchase', createPurchase);
 router.post('/confirm', confirmPurchase);
 router.get('/purchase/:orderId/status', getPurchaseStatus);
-
+router.patch('/purchase/:orderId/expire', expirePurchase);
 export default router;

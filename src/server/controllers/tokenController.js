@@ -478,3 +478,21 @@ export async function createCharge(req, res) {
     res.status(500).json({ error: 'Gagal membuat pembayaran' });
   }
 }
+
+/** PATCH /api/tokens/purchase/:orderId/expire — mark transaction as expired */
+export async function expirePurchase(req, res) {
+  const { orderId } = req.params;
+  if (!orderId) return res.status(400).json({ error: 'order_id wajib diisi' });
+  try {
+    const resp = await fetchWithTimeout(
+      `${dbUrl('payment_transactions')}?order_id=eq.${orderId}`,
+      { method: 'PATCH', headers: serviceHeaders, body: JSON.stringify({ status: 'expired' }) },
+      8000,
+    );
+    if (!resp.ok) return res.status(500).json({ error: 'Gagal memperbarui status' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('expirePurchase error:', err);
+    res.status(500).json({ error: 'Gagal memperbarui status' });
+  }
+}
