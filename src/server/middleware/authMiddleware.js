@@ -1,4 +1,5 @@
 import { config } from '../config/env.js';
+import { fetchWithTimeout } from '../config/http.js';
 
 export async function requireAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -9,15 +10,30 @@ export async function requireAuth(req, res, next) {
   const token = header.slice(7);
 
   try {
-    const res2 = await fetch(`${config.insforge.url}/api/auth/sessions/current`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: config.insforge.anonKey || config.insforge.serviceKey,
+    const res2 = await fetchWithTimeout(
+      `${config.insforge.url}/api/auth/sessions/current`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: config.insforge.anonKey || config.insforge.serviceKey,
+        },
       },
-    });
+      8000,
+    );
+
+    // InsForge unavailable (5xx/network) — NOT an auth failure.
+    // Return 503 so client retries instead of logging the user out.
+    if (res2.status >= 500) {
+      return res.status(503).json({ error: 'Layanan autentikasi sedang tidak tersedia' });
+    }
+
+    // Genuine auth rejection — only 401/403 from InsForge means bad token.
+    if (res2.status === 401 || res2.status === 403) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
 
     if (!res2.ok) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      return res.status(503).json({ error: 'Layanan autentikasi sedang tidak tersedia' });
     }
 
     const body = await res2.json();
@@ -27,7 +43,10 @@ export async function requireAuth(req, res, next) {
 
     req.user = body.user;
     next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (err) {
+    // Network error / abort (timeout) — don't punish the user with logout.
+    const isAbort = err?.name === 'AbortError';
+    console.error('requireAuth upstream error:', isAbort ? 'timeout' : err.message);
+    return res.status(503).json({ error: 'Layanan autentikasi sedang tidak tersedia' });
   }
 }

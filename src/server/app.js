@@ -33,15 +33,29 @@ app.use(express.json({ limit: '5mb' }));
 // HTTP Request Logging via Winston
 app.use(morgan('combined', { stream: new LoggerStream() }));
 
-// General rate limiting
+// General rate limiting (excludes high-frequency polling endpoints)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' },
 });
-app.use('/api/', limiter);
+app.use('/api/', (req, res, next) => {
+  // Skip general limiter for status polling (has its own limiter below)
+  if (req.path.match(/^\/tokens\/purchase\/[^/]+\/status$/)) return next();
+  limiter(req, res, next);
+});
+
+// Higher limit for payment status polling (legitimate 3s interval)
+const pollLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Cek status terlalu sering. Silakan tunggu sebentar.' },
+});
+app.use('/api/tokens/purchase/:orderId/status', pollLimiter);
 
 // Stricter rate limit for AI endpoints
 const aiLimiter = rateLimit({
@@ -77,8 +91,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   logger.info(`Server running on port ${config.port} [${config.nodeEnv}]`);
 });
+
+// Prevent hanging connections on slow upstreams
+server.timeout = 30000;       // 30s per request
+server.keepAliveTimeout = 5000;
+server.headersTimeout = 6500; // > keepAliveTimeout
 
 export default app;

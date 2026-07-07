@@ -1,4 +1,5 @@
 import { config } from '../config/env.js';
+import { fetchWithTimeout } from '../config/http.js';
 
 const serviceHeaders = {
   'Content-Type': 'application/json',
@@ -243,9 +244,10 @@ export async function getPurchaseStatus(req, res) {
 
   try {
     // 1. Cek DB dulu (fast path)
-    const dbResp = await fetch(
+    const dbResp = await fetchWithTimeout(
       `${dbUrl('payment_transactions')}?order_id=eq.${orderId}&user_id=eq.${req.user.id}&select=status,tokens,midtrans_transaction_id,payment_method,settled_at,created_at`,
       { headers: serviceHeaders },
+      8000,
     );
     if (!dbResp.ok) return res.status(500).json({ error: 'Gagal membaca status pembayaran' });
     const dbData = await dbResp.json();
@@ -258,10 +260,10 @@ export async function getPurchaseStatus(req, res) {
     }
 
     // 2. Kalo masih pending, cek langsung ke Midtrans Core API (self-healing)
-    const coreResp = await fetch(`${config.midtrans.coreApiUrl}/${orderId}/status`, {
+    const coreResp = await fetchWithTimeout(`${config.midtrans.coreApiUrl}/${orderId}/status`, {
       method: 'GET',
       headers: { Authorization: coreAuth(), Accept: 'application/json' },
-    });
+    }, 8000);
 
     const mtStatus = coreResp.ok ? await coreResp.json() : null;
     const midtransOk = mtStatus && mtStatus.status_code !== '404' && mtStatus.transaction_status;
@@ -271,7 +273,7 @@ export async function getPurchaseStatus(req, res) {
 
       if (ts === 'settlement' || ts === 'capture') {
         // Kredit token lewat RPC (sama kaya webhook)
-        const rpcResp = await fetch(rpcUrl('credit_tokens'), {
+        const rpcResp = await fetchWithTimeout(rpcUrl('credit_tokens'), {
           method: 'POST',
           headers: { ...serviceHeaders, 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -280,7 +282,7 @@ export async function getPurchaseStatus(req, res) {
             p_payment_method: mtStatus.payment_type,
             p_raw: JSON.stringify(mtStatus),
           }),
-        });
+        }, 8000);
 
         if (rpcResp.ok) {
           return res.json({ success: true, data: { status: 'settlement', tokens: tx.tokens, paymentMethod: mtStatus.payment_type, settledAt: new Date().toISOString(), createdAt: tx.created_at } });
@@ -300,8 +302,10 @@ export async function getPurchaseStatus(req, res) {
     // Balikin status dari DB
     return res.json({ success: true, data: { status: tx.status, tokens: tx.tokens, paymentMethod: tx.payment_method, createdAt: tx.created_at } });
   } catch (err) {
-    console.error('getPurchaseStatus error:', err);
-    res.status(500).json({ error: 'Gagal membaca status pembayaran' });
+    const isAbort = err?.name === 'AbortError';
+    console.error('getPurchaseStatus error:', isAbort ? 'timeout' : err);
+    // Timeout/upstream unavailable — tell client to retry, don't hard-fail.
+    res.status(503).json({ error: 'Cek status pembayaran sedang lambat, coba lagi' });
   }
 }
 

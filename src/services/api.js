@@ -27,6 +27,8 @@ api.interceptors.response.use(
   },
   (err) => {
     const status = err.response?.status
+    // Only logout on genuine auth rejection. 503/500/network = upstream hiccup,
+    // user is still authenticated — don't punish them with logout.
     if (status === 401) {
       localStorage.removeItem('access_token')
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
@@ -36,6 +38,7 @@ api.interceptors.response.use(
     if (status === 402 && window.location.pathname !== '/tokens') {
       window.location.href = '/tokens?insufficient=1'
     }
+    // 429 / 503 / network: reject silently, caller handles retry
     return Promise.reject(err)
   }
 )
