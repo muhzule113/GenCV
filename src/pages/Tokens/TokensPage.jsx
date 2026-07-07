@@ -16,6 +16,7 @@ const packages = [
 ]
 
 export default function TokensPage() {
+  const navigate = useNavigate()
   const addToast = useToastStore((s) => s.addToast)
   const [searchParams] = useSearchParams()
   const { tokenBalance, fetchTokenBalance } = useAuthStore()

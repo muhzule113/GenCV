@@ -69,6 +69,7 @@ export default function WaitingPayment({
   const [paymentData, setPaymentData] = useState(null)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const pollRef = useRef(null)
 
   const checkStatus = useCallback(async () => {
@@ -173,6 +174,37 @@ export default function WaitingPayment({
           <button onClick={onCancel} className="btn-primary w-full">
             Tutup
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── CONFIRM CANCEL ── */
+  if (showConfirm) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-surface rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl text-center">
+          <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2">Batalkan Pembayaran?</h2>
+          <p className="text-text-secondary mb-6">Pembayaran akan dibatalkan dan kamu bisa memilih metode pembayaran lain.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowConfirm(false)}
+              className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-muted hover:border-ink hover:text-ink transition-all duration-150"
+            >
+              TIDAK
+            </button>
+            <button
+              onClick={onCancel}
+              className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg bg-danger text-white hover:bg-danger/90 transition-all duration-150"
+            >
+              YA
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -293,13 +325,13 @@ export default function WaitingPayment({
             </button>
           )}
           <button
-            onClick={onCancel}
-            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg
-                       border border-danger/30 text-danger
-                       hover:bg-danger hover:text-white hover:border-danger
-                       focus:outline-none focus:ring-2 focus:ring-danger/30
-                       transition-all duration-150"
-          >
+              onClick={() => setShowConfirm(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg
+                         border border-danger/30 text-danger
+                         hover:bg-danger hover:text-white hover:border-danger
+                         focus:outline-none focus:ring-2 focus:ring-danger/30
+                         transition-all duration-150"
+            >
             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
