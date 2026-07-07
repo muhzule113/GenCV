@@ -275,14 +275,34 @@ export default function WaitingPayment({
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-center gap-4">
+        {/* Actions — proper buttons with visual hierarchy */}
+        <div className="flex items-center gap-3">
           {onMinimize && (
-            <button onClick={onMinimize} className="text-sm text-muted hover:text-ink transition-colors">
+            <button
+              onClick={onMinimize}
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg
+                         border border-border text-muted
+                         hover:border-ink hover:text-ink
+                         focus:outline-none focus:ring-2 focus:ring-ink/20
+                         transition-all duration-150"
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
               Minimalisir
             </button>
           )}
-          <button onClick={onCancel} className="text-sm text-muted hover:text-danger underline transition-colors">
+          <button
+            onClick={onCancel}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg
+                       border border-danger/30 text-danger
+                       hover:bg-danger hover:text-white hover:border-danger
+                       focus:outline-none focus:ring-2 focus:ring-danger/30
+                       transition-all duration-150"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
             Batalkan
           </button>
         </div>
