@@ -29,8 +29,24 @@ export default function useAuth() {
   }, [login, navigate, addToast])
 
   const signUp = useCallback(async (email, password, options = {}) => {
-    const { data, error } = await insforge.auth.signUp({ email, password, ...options })
-    if (error) { addToast(error.message, 'error'); return false }
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+    let data
+    try {
+      const resp = await fetch(`${apiBase}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name: options?.data?.name }),
+      })
+      data = await resp.json()
+      if (!resp.ok) {
+        addToast(data?.error || 'Gagal membuat akun', 'error')
+        return false
+      }
+    } catch (err) {
+      addToast('Gagal terhubung ke server', 'error')
+      return false
+    }
+
     if (!data.accessToken || !data.user?.emailConfirmed) {
       addToast('Kode verifikasi telah dikirim ke email Anda', 'success')
       return { email, needsVerification: true }

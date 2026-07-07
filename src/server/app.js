@@ -15,6 +15,8 @@ import templateRoutes from './routes/templateRoutes.js';
 import tokenRoutes from './routes/tokenRoutes.js';
 import midtransRoutes from './routes/midtransRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -59,15 +61,25 @@ app.use('/api/tokens/purchase/:orderId/status', pollLimiter);
 
 // Stricter rate limit for AI endpoints
 const aiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 20,
+  windowMs: 1 * 60 * 1000,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Batas AI generation tercapai. Silakan coba lagi nanti.' },
+  message: { error: 'Terlalu banyak permintaan AI. Silakan coba lagi.' },
 });
 app.use('/api/cv/generate-summary', aiLimiter);
 app.use('/api/cv/analyze-job-match', aiLimiter);
 app.use('/api/letter/generate', aiLimiter);
+
+// Stricter rate limit for registration (account farming prevention)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 jam
+  max: 10,                   // maks 10 registrasi per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Terlalu banyak percobaan registrasi. Silakan coba lagi nanti.' },
+});
+app.use('/api/auth/register', registerLimiter);
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -85,6 +97,7 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/midtrans', midtransRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/auth', authRoutes);
 app.use(Sentry.expressErrorHandler());
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', { error: err.message, stack: err.stack });

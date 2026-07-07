@@ -42,6 +42,11 @@ export async function requireAuth(req, res, next) {
     }
 
     req.user = body.user;
+
+    // Blokir akses kalo email belum diverifikasi (kecuali verify/resend endpoint)
+    if (!body.user?.email_confirmed_at) {
+      return res.status(403).json({ error: 'Email belum diverifikasi. Silakan periksa email Anda.', code: 'EMAIL_NOT_VERIFIED' });
+    }
     next();
   } catch (err) {
     // Network error / abort (timeout) — don't punish the user with logout.

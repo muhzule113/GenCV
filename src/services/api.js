@@ -35,6 +35,13 @@ api.interceptors.response.use(
         window.location.href = '/login?expired=1'
       }
     }
+    if (status === 403 && err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+      localStorage.removeItem('access_token')
+      const msg = err.response?.data?.error || 'Email belum diverifikasi'
+      import('../store/toastStore').then((m) => m.default.getState().addToast(msg, 'error'))
+      window.location.href = '/register?email_not_verified=1'
+      return
+    }
     if (status === 402 && window.location.pathname !== '/tokens') {
       window.location.href = '/tokens?insufficient=1'
     }
