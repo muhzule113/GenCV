@@ -109,6 +109,17 @@ export async function createPurchase(req, res) {
     const purchaseRaw = await purchaseResp.json();
     const purchase = Array.isArray(purchaseRaw) ? purchaseRaw[0] : purchaseRaw;
 
+    // Cek pending transaction — tolak kalo masih ada yang belum dibayar
+    const pendingCheckResp = await fetch(
+      `${dbUrl('payment_transactions')}?user_id=eq.${req.user.id}&status=eq.pending&select=id,order_id,created_at`,
+      { headers: serviceHeaders },
+    );
+    if (pendingCheckResp.ok) {
+      const pendingRows = await pendingCheckResp.json();
+      if (Array.isArray(pendingRows) && pendingRows.length > 0) {
+        return res.status(409).json({ error: 'Masih ada pembayaran yang belum diselesaikan. Selesaikan atau batalkan pembayaran sebelumnya.', code: 'PENDING_EXISTS' });
+      }
+    }
     // Create Midtrans Snap transaction
     const auth = Buffer.from(config.midtrans.serverKey + ':').toString('base64');
     const snapBody = {
@@ -423,6 +434,17 @@ export async function createCharge(req, res) {
     const rand = Math.random().toString(36).slice(2, 6);
     const orderId = `GENCV-${short}-${ts}-${rand}`;
 
+    // Cek pending transaction — tolak kalo masih ada yang belum dibayar
+    const pendingCheckResp = await fetch(
+      `${dbUrl('payment_transactions')}?user_id=eq.${req.user.id}&status=eq.pending&select=id,order_id,created_at`,
+      { headers: serviceHeaders },
+    );
+    if (pendingCheckResp.ok) {
+      const pendingRows = await pendingCheckResp.json();
+      if (Array.isArray(pendingRows) && pendingRows.length > 0) {
+        return res.status(409).json({ error: 'Masih ada pembayaran yang belum diselesaikan. Selesaikan atau batalkan pembayaran sebelumnya.', code: 'PENDING_EXISTS' });
+      }
+    }
     // Call Midtrans Core API
     const chargePayload = buildChargePayload(orderId, pkg.price, payment_method);
     const coreResp = await fetch(`${config.midtrans.coreApiUrl}/charge`, {

@@ -7,7 +7,10 @@ export async function listTemplates(req, res) {
     .eq('is_active', true)
     .order('created_at', { ascending: true });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
 
   res.json({ success: true, data });
 }

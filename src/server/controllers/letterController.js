@@ -19,7 +19,10 @@ export async function listLetters(req, res) {
     .order('created_at', { ascending: false })
     .range(from, to);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
 
   res.json({
     success: true,
@@ -46,7 +49,10 @@ export async function createLetter(req, res) {
     .select()
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
 
   res.status(201).json({ success: true, data });
 }export async function getLetter(req, res) {
@@ -57,7 +63,10 @@ export async function createLetter(req, res) {
     .eq('user_id', req.user.id)
     .maybeSingle();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   if (!data) return res.status(404).json({ error: 'Cover letter not found' });
 
   let cvData = null;
@@ -122,7 +131,8 @@ export async function updateLetter(req, res) {
     if (error.code === '23505') {
       return res.status(409).json({ error: 'Surat lamaran untuk CV ini sudah ada' });
     }
-    return res.status(500).json({ error: error.message });
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
   if (!data) return res.status(404).json({ error: 'Cover letter not found' });
 
@@ -144,7 +154,10 @@ export async function deleteLetter(req, res) {
     .delete()
     .eq('id', req.params.id);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   res.json({ success: true, message: 'Cover letter deleted' });
 }
 
@@ -200,7 +213,10 @@ export async function generateLetter(req, res) {
     .eq('user_id', req.user.id)
     .maybeSingle();
 
-  if (cvError) return res.status(500).json({ error: cvError.message });
+  if (cvError) {
+    console.error('[DB]', cvError);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   if (!cvRecord) return res.status(404).json({ error: 'CV tidak ditemukan' });
 
   const cvData = cvRecord.data;
@@ -278,7 +294,8 @@ export async function generateLetter(req, res) {
     }, tokenBalance: req.tokenBalance });
   } catch (err) {
     await refundToken(req);
-    res.status(500).json({ error: 'AI generation failed', details: err.message });
+    console.error('[AI]', err);
+    res.status(500).json({ error: 'AI generation failed' });
   }
 }
 
@@ -320,6 +337,7 @@ export async function recommendHighlights(req, res) {
     res.json({ success: true, data: { highlights }, tokenBalance: req.tokenBalance });
   } catch (err) {
     await refundToken(req);
-    res.status(500).json({ error: 'AI recommendation failed', details: err.message });
+    console.error('[AI]', err);
+    res.status(500).json({ error: 'AI recommendation failed' });
   }
 }

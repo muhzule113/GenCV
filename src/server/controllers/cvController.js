@@ -15,7 +15,10 @@ export async function listCVs(req, res) {
     .order('created_at', { ascending: false })
     .range(from, to);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
 
   res.json({
     success: true,
@@ -44,7 +47,10 @@ export async function createCV(req, res) {
     .select()
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
 
   res.status(201).json({ success: true, data });
 }
@@ -57,7 +63,10 @@ export async function getCV(req, res) {
     .eq('user_id', req.user.id)
     .maybeSingle();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   if (!data) return res.status(404).json({ error: 'CV not found' });
 
   res.json({ success: true, data });
@@ -79,7 +88,10 @@ export async function updateCV(req, res) {
     .select()
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   if (!data) return res.status(404).json({ error: 'CV not found' });
 
   res.json({ success: true, data });
@@ -100,7 +112,10 @@ export async function deleteCV(req, res) {
     .delete()
     .eq('id', req.params.id);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   res.json({ success: true, message: 'CV deleted' });
 }
 
@@ -114,7 +129,10 @@ export async function duplicateCV(req, res) {
     .eq('user_id', req.user.id)
     .maybeSingle();
 
-  if (fetchError) return res.status(500).json({ error: fetchError.message });
+  if (fetchError) {
+    console.error('[DB]', fetchError);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   if (!original) return res.status(404).json({ error: 'CV not found' });
 
   const { data, error } = await insforge.database
@@ -128,7 +146,10 @@ export async function duplicateCV(req, res) {
     .select()
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
 
   res.status(201).json({ success: true, data });
 }
@@ -152,7 +173,8 @@ export async function analyzeJobMatch(req, res) {
         .maybeSingle();
 
       if (error) {
-        return res.status(500).json({ error: error.message });
+        console.error('[DB]', error);
+        return res.status(500).json({ error: 'Terjadi kesalahan' });
       }
       if (!cv) {
         return res.status(404).json({ error: 'CV not found' });
@@ -172,7 +194,8 @@ export async function analyzeJobMatch(req, res) {
     res.json({ success: true, data: result, tokenBalance: req.tokenBalance });
   } catch (err) {
     await refundToken(req);
-    res.status(500).json({ error: 'AI analysis failed', details: err.message });
+    console.error('[AI]', err);
+    res.status(500).json({ error: 'AI analysis failed' });
   }
 }
 
@@ -191,7 +214,8 @@ export async function generateSummary(req, res) {
     res.json({ success: true, data: { summary }, tokenBalance: req.tokenBalance });
   } catch (err) {
     await refundToken(req);
-    res.status(500).json({ error: 'AI generation failed', details: err.message });
+    console.error('[AI]', err);
+    res.status(500).json({ error: 'AI generation failed' });
   }
 }
 
@@ -235,7 +259,8 @@ export async function recommendSkills(req, res) {
     res.json({ success: true, data: { skills: filtered }, tokenBalance: req.tokenBalance });
   } catch (err) {
     await refundToken(req);
-    res.status(500).json({ error: 'AI recommendation failed', details: err.message });
+    console.error('[AI]', err);
+    res.status(500).json({ error: 'AI recommendation failed' });
   }
 }
 
@@ -248,7 +273,10 @@ export async function toggleShare(req, res) {
     .eq('user_id', req.user.id)
     .maybeSingle();
 
-  if (fetchErr) return res.status(500).json({ error: fetchErr.message });
+  if (fetchErr) {
+    console.error('[DB]', fetchErr);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   if (!cv) return res.status(404).json({ error: 'CV not found' });
 
   const newToken = cv.share_token ? null : crypto.randomBytes(16).toString('hex');
@@ -261,7 +289,10 @@ export async function toggleShare(req, res) {
     .select('id, share_token')
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
 
   res.json({
     success: true,
@@ -282,7 +313,10 @@ export async function getSharedCV(req, res) {
     .eq('share_token', token)
     .maybeSingle();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' });
+  }
   if (!data) return res.status(404).json({ error: 'Shared CV not found or link has been disabled' });
 
   res.json({ success: true, data });
@@ -309,6 +343,7 @@ export async function parseOCRText(req, res) {
     res.json({ success: true, data: parsed, tokenBalance: req.tokenBalance });
   } catch (err) {
     await refundToken(req);
-    res.status(500).json({ error: 'Gagal mem-parse teks CV', details: err.message });
+    console.error('[AI]', err);
+    res.status(500).json({ error: 'Gagal mem-parse teks CV' });
   }
 }

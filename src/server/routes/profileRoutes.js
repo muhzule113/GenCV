@@ -12,7 +12,8 @@ router.get('/', requireAuth, async (req, res) => {
     .single()
 
   if (error && error.code !== 'PGRST116') {
-    return res.status(500).json({ error: error.message })
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' })
   }
 
   res.json({ success: true, data: data || null })
@@ -31,7 +32,10 @@ router.put('/', requireAuth, async (req, res) => {
     .select()
     .single()
 
-  if (error) return res.status(500).json({ error: error.message })
+  if (error) {
+    console.error('[DB]', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan' })
+  }
 
   res.json({ success: true, data })
 })

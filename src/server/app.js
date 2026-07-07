@@ -29,6 +29,7 @@ Sentry.init({
 const app = express();
 app.disable('etag');
 app.use(helmet());
+app.set('trust proxy', 1);
 app.use(cors({ origin: config.cors.clientUrl }));
 app.use(express.json({ limit: '5mb' }));
 
@@ -79,6 +80,11 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Terlalu banyak percobaan registrasi. Silakan coba lagi nanti.' },
 });
+
+// Health check — no auth, for orchestrator / load balancer
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 app.use('/api/auth/register', registerLimiter);
 
 // Swagger API Documentation
@@ -112,5 +118,21 @@ const server = app.listen(config.port, () => {
 server.timeout = 30000;       // 30s per request
 server.keepAliveTimeout = 5000;
 server.headersTimeout = 6500; // > keepAliveTimeout
+
+function shutdown(signal) {
+  logger.info(`${signal} received — shutting down gracefully...`);
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+  // Force exit after 10s
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 export default app;

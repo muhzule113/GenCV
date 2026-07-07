@@ -1,6 +1,27 @@
 import crypto from 'node:crypto';
 import { config } from '../config/env.js';
 
+// Midtrans known IP ranges (source: docs.midtrans.com)
+const MIDTRANS_IPS = [
+  '103.26.52.0/24',
+  '103.26.53.0/24',
+  '103.26.54.0/24',
+  '103.26.55.0/24',
+  '167.172.0.0/16',
+  '142.93.0.0/16',
+  '128.199.0.0/16',
+];
+
+function isMidtransIp(ip) {
+  const ipNum = ip.split('.').reduce((a, b) => (a << 8) + parseInt(b), 0) >>> 0;
+  return MIDTRANS_IPS.some(cidr => {
+    const [range, bits] = cidr.split('/');
+    const mask = ~(2 ** (32 - parseInt(bits)) - 1);
+    const rangeNum = range.split('.').reduce((a, b) => (a << 8) + parseInt(b), 0) >>> 0;
+    return (ipNum & mask) === (rangeNum & mask);
+  });
+}
+
 const serviceHeaders = {
   'Content-Type': 'application/json',
   Authorization: `Bearer ${config.insforge.serviceKey}`,
@@ -82,6 +103,12 @@ export function verifySignature(orderId, statusCode, grossAmount, serverKey, sig
 export async function handleWebhook(req, res) {
   try {
     const notification = req.body;
+    // IP allowlist
+    const callerIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+    if (!isMidtransIp(callerIp)) {
+      console.error('Midtrans webhook from non-Midtrans IP:', callerIp);
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
     const orderId = notification.order_id;
     const statusCode = notification.status_code;
@@ -143,7 +170,7 @@ export async function handleWebhook(req, res) {
     res.status(200).json({ status: 'ok' });
   } catch (err) {
     console.error('Midtrans webhook error:', err);
-    res.status(200).json({ status: 'ok' }); // Still return 200 to acknowledge receipt
+    res.status(500).json({ error: 'Internal server error' }); // 500 so Midtrans retries
   }
 }
 
