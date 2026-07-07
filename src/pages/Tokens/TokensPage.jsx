@@ -239,12 +239,27 @@ export default function TokensPage() {
                 Setiap penggunaan fitur AI membutuhkan <strong>1 token</strong>.
               </p>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 border border-warning/20">
-              <svg className="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <span className="text-lg font-bold text-warning">{tokenBalance ?? '...'}</span>
-              <span className="text-xs text-muted">token</span>
+            <div className="flex items-center gap-3">
+              {/* Minimized payment badge — left of token counter */}
+              {paymentPending && !showOverlay && (
+                <button
+                  onClick={() => setShowOverlay(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-clip/10 border border-clip/30 text-clip hover:bg-clip/20 transition-all"
+                >
+                  <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-xs font-medium tabular-nums">{formatCountdown(remaining)}</span>
+                </button>
+              )}
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 border border-warning/20">
+                <svg className="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span className="text-lg font-bold text-warning">{tokenBalance ?? '...'}</span>
+                <span className="text-xs text-muted">token</span>
+              </div>
             </div>
           </div>
 
@@ -299,22 +314,6 @@ export default function TokensPage() {
         </div>
       </div>
 
-      {/* Floating badge (when minimized) */}
-      {paymentPending && !showOverlay && (
-        <button
-          onClick={() => setShowOverlay(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 transition-all"
-        >
-          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <span className="text-sm font-medium">Menunggu Pembayaran</span>
-          <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">
-            {formatCountdown(remaining)}
-          </span>
-        </button>
-      )}
 
       {/* WaitingPayment overlay */}
       {paymentPending && showOverlay && (
