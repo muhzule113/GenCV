@@ -1,9 +1,20 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import { existsSync } from 'fs';
 
+// Load env file based on NODE_ENV
+const nodeEnv = process.env.NODE_ENV || 'development';
+const envFile = `.env.${nodeEnv}`;
+if (existsSync(envFile)) {
+  dotenv.config({ path: envFile });
+}
+dotenv.config(); // .env always loaded as base
+
+function parseClientUrls(val) {
+  return val ? val.split(',').map(s => s.trim()) : ['http://localhost:5173'];
+}
 export const config = {
   port: process.env.PORT || 5000,
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
   insforge: {
     url: process.env.INSFORGE_URL,
     serviceKey: process.env.INSFORGE_SERVICE_KEY,
@@ -23,6 +34,6 @@ export const config = {
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions',
   },
   cors: {
-    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+    clientUrls: parseClientUrls(process.env.CLIENT_URL),
   },
 };

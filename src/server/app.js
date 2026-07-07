@@ -30,7 +30,17 @@ const app = express();
 app.disable('etag');
 app.use(helmet());
 app.set('trust proxy', 1);
-app.use(cors({ origin: config.cors.clientUrl }));
+const allowedOrigins = config.cors.clientUrls;
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (server-to-server, curl, etc.)
+    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not allowed by CORS'));
+    }
+  },
+}));
 app.use(express.json({ limit: '5mb' }));
 
 // HTTP Request Logging via Winston
@@ -96,6 +106,16 @@ app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
+// Production: serve built frontend from dist/
+if (config.nodeEnv === 'production') {
+  const distPath = new URL('../../../dist', import.meta.url).pathname;
+  app.use(express.static(distPath));
+  // SPA fallback — semua route non-API ke index.html
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.sendFile(distPath + '/index.html');
+  });
+}
 
 app.use('/api/cv', cvRoutes);
 app.use('/api/letter', letterRoutes);

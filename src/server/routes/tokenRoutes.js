@@ -1,3 +1,4 @@
+import rateLimit from 'express-rate-limit';
 import { Router } from 'express';
 import { requireAuth } from '../middleware/authMiddleware.js';
 import {
@@ -10,13 +11,20 @@ import {
   expirePurchase,
 } from '../controllers/tokenController.js';
 
+const chargeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Terlalu banyak percobaan pembayaran. Silakan coba lagi.' },
+});
+
 const router = Router();
 
 router.use(requireAuth);
 
-router.get('/balance', getBalance);
+router.post('/charge', chargeLimiter, createCharge);
 router.get('/packages', listPackages);
-router.post('/charge', createCharge);
 router.post('/purchase', createPurchase);
 router.post('/confirm', confirmPurchase);
 router.get('/purchase/:orderId/status', getPurchaseStatus);

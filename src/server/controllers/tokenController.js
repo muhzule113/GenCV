@@ -109,15 +109,21 @@ export async function createPurchase(req, res) {
     const purchaseRaw = await purchaseResp.json();
     const purchase = Array.isArray(purchaseRaw) ? purchaseRaw[0] : purchaseRaw;
 
-    // Cek pending transaction — tolak kalo masih ada yang belum dibayar
-    const pendingCheckResp = await fetch(
-      `${dbUrl('payment_transactions')}?user_id=eq.${req.user.id}&status=eq.pending&select=id,order_id,created_at`,
+    // Expire existing pending — don't block, just clear old ones
+    const pendingResp = await fetch(
+      `${dbUrl('payment_transactions')}?user_id=eq.${req.user.id}&status=eq.pending&select=id`,
       { headers: serviceHeaders },
     );
-    if (pendingCheckResp.ok) {
-      const pendingRows = await pendingCheckResp.json();
+    if (pendingResp.ok) {
+      const pendingRows = await pendingResp.json();
       if (Array.isArray(pendingRows) && pendingRows.length > 0) {
-        return res.status(409).json({ error: 'Masih ada pembayaran yang belum diselesaikan. Selesaikan atau batalkan pembayaran sebelumnya.', code: 'PENDING_EXISTS' });
+        for (const row of pendingRows) {
+          fetch(`${dbUrl('payment_transactions')}?id=eq.${row.id}`, {
+            method: 'PATCH',
+            headers: serviceHeaders,
+            body: JSON.stringify({ status: 'expired' }),
+          }).catch(() => {});
+        }
       }
     }
     // Create Midtrans Snap transaction
@@ -434,15 +440,21 @@ export async function createCharge(req, res) {
     const rand = Math.random().toString(36).slice(2, 6);
     const orderId = `GENCV-${short}-${ts}-${rand}`;
 
-    // Cek pending transaction — tolak kalo masih ada yang belum dibayar
-    const pendingCheckResp = await fetch(
-      `${dbUrl('payment_transactions')}?user_id=eq.${req.user.id}&status=eq.pending&select=id,order_id,created_at`,
+    // Expire existing pending transactions — prevent stale txs from blocking
+    const pendingResp = await fetch(
+      `${dbUrl('payment_transactions')}?user_id=eq.${req.user.id}&status=eq.pending&select=id`,
       { headers: serviceHeaders },
     );
-    if (pendingCheckResp.ok) {
-      const pendingRows = await pendingCheckResp.json();
+    if (pendingResp.ok) {
+      const pendingRows = await pendingResp.json();
       if (Array.isArray(pendingRows) && pendingRows.length > 0) {
-        return res.status(409).json({ error: 'Masih ada pembayaran yang belum diselesaikan. Selesaikan atau batalkan pembayaran sebelumnya.', code: 'PENDING_EXISTS' });
+        for (const row of pendingRows) {
+          fetch(`${dbUrl('payment_transactions')}?id=eq.${row.id}`, {
+            method: 'PATCH',
+            headers: serviceHeaders,
+            body: JSON.stringify({ status: 'expired' }),
+          }).catch(() => {});
+        }
       }
     }
     // Call Midtrans Core API
