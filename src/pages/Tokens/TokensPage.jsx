@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
 import useAuthStore from '../../store/authStore'
+import useToastStore from '../../store/toastStore'
 import Button from '../../components/common/Button'
 import PaymentMethodGrid from './PaymentMethodGrid'
 import WaitingPayment from './WaitingPayment'
@@ -15,7 +16,7 @@ const packages = [
 ]
 
 export default function TokensPage() {
-  const navigate = useNavigate()
+  const addToast = useToastStore((s) => s.addToast)
   const [searchParams] = useSearchParams()
   const { tokenBalance, fetchTokenBalance } = useAuthStore()
   const [selectedPkg, setSelectedPkg] = useState(null)
@@ -72,7 +73,8 @@ export default function TokensPage() {
 
   const handlePackageSelect = (pkg) => {
     if (paymentPending) {
-      alert('Silahkan selesaikan pembayaran yang ada terlebih dahulu')
+      addToast('Selesaikan pembayaran yang menunggu terlebih dahulu', 'warning')
+      setShowOverlay(true)
       return
     }
     setSelectedPkg(pkg)
@@ -81,6 +83,11 @@ export default function TokensPage() {
   }
 
   const handleMethodSelect = async (methodId) => {
+    if (paymentPending) {
+      addToast('Selesaikan pembayaran yang menunggu terlebih dahulu', 'warning')
+      setShowOverlay(true)
+      return
+    }
     setSelectedMethod(methodId)
     if (!selectedPkg) return
 
@@ -103,7 +110,7 @@ export default function TokensPage() {
     } catch (err) {
       console.error('Charge failed:', err)
       const msg = err?.response?.data?.detail || 'Gagal memproses pembayaran'
-      alert(msg)
+      addToast(msg, 'error')
     } finally {
       setPurchasing(false)
     }
