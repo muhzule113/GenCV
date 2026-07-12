@@ -1,164 +1,152 @@
-import { insforge } from '../config/insforge.js';
+import postgres from 'postgres';
+import { config } from '../config/env.js';
 import { refundToken } from '../middleware/tokenMiddleware.js';
+
+const sql = postgres(config.database.url);
+
 export async function listLetters(req, res) {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
+  const offset = (page - 1) * limit;
 
-  let query = insforge.database
-    .from('cover_letters')
-    .select('id, position, company, cv_id, created_at, updated_at', { count: 'exact' })
-    .eq('user_id', req.user.id);
+  try {
+    let query = sql`
+      SELECT id, position, company, cv_id, created_at, updated_at,
+        COUNT(*) OVER() AS total_count
+      FROM cover_letters
+      WHERE user_id = ${req.user.id}
+    `;
 
-  if (req.query.cv_id) {
-    query = query.eq('cv_id', req.query.cv_id);
+    if (req.query.cv_id) {
+      query = sql`
+        SELECT id, position, company, cv_id, created_at, updated_at,
+          COUNT(*) OVER() AS total_count
+        FROM cover_letters
+        WHERE user_id = ${req.user.id} AND cv_id = ${req.query.cv_id}
+      `;
+    }
+
+    query = sql`${query} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    const rows = await query;
+    const count = rows.length > 0 ? Number(rows[0].total_count) : 0;
+
+    res.json({
+      success: true,
+      data: rows.map(({ total_count, ...r }) => r),
+      pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) },
+    });
+  } catch (err) {
+    console.error('[DB]', err);
+    res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-
-  const { data, error, count } = await query
-    .order('created_at', { ascending: false })
-    .range(from, to);
-
-  if (error) {
-    console.error('[DB]', error);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
-  }
-
-  res.json({
-    success: true,
-    data,
-    pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) },
-  });
 }
 
 export async function createLetter(req, res) {
   const { cv_id, position, company, content } = req.body;
-  if (!cv_id) {
-    return res.status(400).json({ error: 'cv_id is required' });
+  if (!cv_id) return res.status(400).json({ error: 'cv_id is required' });
+
+  try {
+    // UPSERT on conflict (cv_id, user_id)
+    const [row] = await sql`
+      INSERT INTO cover_letters (user_id, cv_id, position, company, content)
+      VALUES (${req.user.id}, ${cv_id}, ${position || ''}, ${company || ''}, ${content || ''})
+      ON CONFLICT (cv_id, user_id) DO UPDATE SET
+        position = EXCLUDED.position,
+        company = EXCLUDED.company,
+        content = EXCLUDED.content,
+        updated_at = NOW()
+      RETURNING *
+    `;
+    res.status(201).json({ success: true, data: row });
+  } catch (err) {
+    console.error('[DB]', err);
+    res.status(500).json({ error: 'Terjadi kesalahan' });
   }
+}
 
-  const { data, error } = await insforge.database
-    .from('cover_letters')
-    .upsert({
-      user_id: req.user.id,
-      cv_id,
-      position,
-      company,
-      content: content || '',
-    }, { onConflict: 'cv_id, user_id', ignoreDuplicates: false })
-    .select()
-    .single();
+export async function getLetter(req, res) {
+  try {
+    const [row] = await sql`
+      SELECT * FROM cover_letters WHERE id = ${req.params.id} AND user_id = ${req.user.id} LIMIT 1
+    `;
+    if (!row) return res.status(404).json({ error: 'Cover letter not found' });
 
-  if (error) {
-    console.error('[DB]', error);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
+    let cvData = null;
+    if (row.cv_id) {
+      const [cvRecord] = await sql`
+        SELECT data FROM cvs WHERE id = ${row.cv_id} AND user_id = ${req.user.id} LIMIT 1
+      `;
+      cvData = cvRecord?.data || null;
+    }
+
+    const personal = cvData?.personal || {};
+    const p = {
+      name: personal.name || '',
+      email: personal.email || '',
+      phone: personal.phone || '',
+      address: personal.address || '',
+      birthPlace: personal.birthPlace || '',
+      birthDate: personal.birthDate || '',
+      gender: personal.gender || '',
+      lastEducation: cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : '',
+      portfolio: personal.portfolio || '',
+    };
+
+    res.json({
+      success: true,
+      data: {
+        ...row,
+        personal: p,
+        experiences: cvData?.experiences || [],
+        skills: cvData?.skills || { technical: [], soft: [] },
+        cv_title: cvData?.title || '',
+      },
+    });
+  } catch (err) {
+    console.error('[DB]', err);
+    res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-
-  res.status(201).json({ success: true, data });
-}export async function getLetter(req, res) {
-  const { data, error } = await insforge.database
-    .from('cover_letters')
-    .select('*')
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
-
-  if (error) {
-    console.error('[DB]', error);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
-  }
-  if (!data) return res.status(404).json({ error: 'Cover letter not found' });
-
-  let cvData = null;
-  if (data.cv_id) {
-    const { data: cvRecord } = await insforge.database
-      .from('cvs')
-      .select('data')
-      .eq('id', data.cv_id)
-      .eq('user_id', req.user.id)
-      .maybeSingle();
-    cvData = cvRecord?.data || null;
-  }
-
-  const personal = cvData?.personal || {};
-  const p = {
-    name: personal.name || '',
-    email: personal.email || '',
-    phone: personal.phone || '',
-    address: personal.address || '',
-    birthPlace: personal.birthPlace || '',
-    birthDate: personal.birthDate || '',
-    gender: personal.gender || '',
-    lastEducation: cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : '',
-    portfolio: personal.portfolio || '',
-  };
-
-  res.json({
-    success: true,
-    data: {
-      ...data,
-      personal: p,
-      experiences: cvData?.experiences || [],
-      skills: cvData?.skills || { technical: [], soft: [] },
-      cv_title: cvData?.title || '',
-    },
-  });
 }
 
 export async function updateLetter(req, res) {
   const { cv_id, position, company, content } = req.body;
   if (!req.params.id) return res.status(400).json({ error: 'id is required' });
 
-  const updateData = {
-    updated_at: new Date().toISOString(),
-  };
-  
-  // Only update columns that exist in cover_letters table
-  if (cv_id !== undefined) updateData.cv_id = cv_id;
-  if (position !== undefined) updateData.position = position;
-  if (company !== undefined) updateData.company = company;
-  if (content !== undefined) updateData.content = content;
-
-  const { data, error } = await insforge.database
-    .from('cover_letters')
-    .update(updateData)
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === '23505') {
+  try {
+    const [row] = await sql`
+      UPDATE cover_letters SET
+        cv_id = COALESCE(${cv_id}, cv_id),
+        position = COALESCE(${position}, position),
+        company = COALESCE(${company}, company),
+        content = COALESCE(${content}, content),
+        updated_at = NOW()
+      WHERE id = ${req.params.id} AND user_id = ${req.user.id}
+      RETURNING *
+    `;
+    if (!row) return res.status(404).json({ error: 'Cover letter not found' });
+    res.json({ success: true, data: row });
+  } catch (err) {
+    if (err.code === '23505') {
       return res.status(409).json({ error: 'Surat lamaran untuk CV ini sudah ada' });
     }
-    console.error('[DB]', error);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
+    console.error('[DB]', err);
+    res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-  if (!data) return res.status(404).json({ error: 'Cover letter not found' });
-
-  res.json({ success: true, data });
 }
 
 export async function deleteLetter(req, res) {
-  const { data: existing } = await insforge.database
-    .from('cover_letters')
-    .select('id')
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
+  try {
+    const [existing] = await sql`
+      SELECT id FROM cover_letters WHERE id = ${req.params.id} AND user_id = ${req.user.id} LIMIT 1
+    `;
+    if (!existing) return res.status(404).json({ error: 'Cover letter not found' });
 
-  if (!existing) return res.status(404).json({ error: 'Cover letter not found' });
-
-  const { error } = await insforge.database
-    .from('cover_letters')
-    .delete()
-    .eq('id', req.params.id);
-
-  if (error) {
-    console.error('[DB]', error);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
+    await sql`DELETE FROM cover_letters WHERE id = ${req.params.id}`;
+    res.json({ success: true, message: 'Cover letter deleted' });
+  } catch (err) {
+    console.error('[DB]', err);
+    res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-  res.json({ success: true, message: 'Cover letter deleted' });
 }
 
 function formatIndonesianDate(value) {
@@ -199,58 +187,44 @@ export async function generateLetter(req, res) {
     relevant_experience = '',
   } = req.body;
 
-  if (!position || !company) {
-    return res.status(400).json({ error: 'Position and company are required' });
-  }
-  if (!cv_id) {
-    return res.status(400).json({ error: 'CV harus dipilih untuk membuat surat lamaran' });
-  }
-
-  const { data: cvRecord, error: cvError } = await insforge.database
-    .from('cvs')
-    .select('data')
-    .eq('id', cv_id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
-
-  if (cvError) {
-    console.error('[DB]', cvError);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
-  }
-  if (!cvRecord) return res.status(404).json({ error: 'CV tidak ditemukan' });
-
-  const cvData = cvRecord.data;
-
-  const { data: existing } = await insforge.database
-    .from('cover_letters')
-    .select('id')
-    .eq('cv_id', cv_id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
-
-  if (existing) {
-    return res.status(409).json({ error: 'Surat lamaran untuk CV ini sudah ada. Hapus surat yang ada terlebih dahulu jika ingin membuat ulang.', existing_id: existing.id });
-  }
-
-  const mergedPersonal = {
-    name: cvData?.personal?.name || '',
-    email: cvData?.personal?.email || '',
-    phone: cvData?.personal?.phone || '',
-    address: cvData?.personal?.address || personal.address || '',
-    birthPlace: cvData?.personal?.birthPlace || personal.birthPlace || '',
-    birthDate: cvData?.personal?.birthDate || personal.birthDate || '',
-    gender: cvData?.personal?.gender || personal.gender || '',
-    lastEducation: cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : '',
-    portfolio: cvData?.personal?.portfolio || '',
-  };
-
-  const attachmentLabels = buildAttachmentLabels(attachments, custom_attachment);
-  const formattedDate = formatIndonesianDate(letter_date);
-
-  const experiences = cvData?.experiences || [];
-  const skills = cvData?.skills || { technical: [], soft: [] };
+  if (!position || !company) return res.status(400).json({ error: 'Position and company are required' });
+  if (!cv_id) return res.status(400).json({ error: 'CV harus dipilih untuk membuat surat lamaran' });
 
   try {
+    const [cvRecord] = await sql`
+      SELECT data FROM cvs WHERE id = ${cv_id} AND user_id = ${req.user.id} LIMIT 1
+    `;
+    if (!cvRecord) return res.status(404).json({ error: 'CV tidak ditemukan' });
+
+    const cvData = cvRecord.data;
+
+    const [existing] = await sql`
+      SELECT id FROM cover_letters WHERE cv_id = ${cv_id} AND user_id = ${req.user.id} LIMIT 1
+    `;
+    if (existing) {
+      return res.status(409).json({
+        error: 'Surat lamaran untuk CV ini sudah ada. Hapus surat yang ada terlebih dahulu jika ingin membuat ulang.',
+        existing_id: existing.id,
+      });
+    }
+
+    const mergedPersonal = {
+      name: cvData?.personal?.name || '',
+      email: cvData?.personal?.email || '',
+      phone: cvData?.personal?.phone || '',
+      address: cvData?.personal?.address || personal.address || '',
+      birthPlace: cvData?.personal?.birthPlace || personal.birthPlace || '',
+      birthDate: cvData?.personal?.birthDate || personal.birthDate || '',
+      gender: cvData?.personal?.gender || personal.gender || '',
+      lastEducation: cvData?.educations?.[0] ? `${cvData.educations[0].degree || ''} ${cvData.educations[0].field || ''}`.trim() : '',
+      portfolio: cvData?.personal?.portfolio || '',
+    };
+
+    const attachmentLabels = buildAttachmentLabels(attachments, custom_attachment);
+    const formattedDate = formatIndonesianDate(letter_date);
+    const experiences = cvData?.experiences || [];
+    const skills = cvData?.skills || { technical: [], soft: [] };
+
     const { generateCoverLetter } = await import('../services/aiService.js');
     const content = await generateCoverLetter({
       position,
@@ -264,15 +238,15 @@ export async function generateLetter(req, res) {
       relevantExperience: relevant_experience,
     });
 
-    await insforge.database
-      .from('cover_letters')
-      .upsert({
-        user_id: req.user.id,
-        cv_id,
-        position,
-        company,
-        content,
-      }, { onConflict: 'cv_id, user_id', ignoreDuplicates: false });
+    await sql`
+      INSERT INTO cover_letters (user_id, cv_id, position, company, content)
+      VALUES (${req.user.id}, ${cv_id}, ${position}, ${company}, ${content})
+      ON CONFLICT (cv_id, user_id) DO UPDATE SET
+        position = EXCLUDED.position,
+        company = EXCLUDED.company,
+        content = EXCLUDED.content,
+        updated_at = NOW()
+    `;
 
     res.json({
       success: true,
@@ -291,7 +265,9 @@ export async function generateLetter(req, res) {
         highlights: highlights || [],
         experiences,
         skills,
-    }, tokenBalance: req.tokenBalance });
+      },
+      tokenBalance: req.tokenBalance,
+    });
   } catch (err) {
     await refundToken(req);
     console.error('[AI]', err);
@@ -301,20 +277,18 @@ export async function generateLetter(req, res) {
 
 export async function recommendHighlights(req, res) {
   const { position, cv_id } = req.body;
-
-  if (!position) {
-    return res.status(400).json({ error: 'Position is required' });
-  }
+  if (!position) return res.status(400).json({ error: 'Position is required' });
 
   let cvData = null;
   if (cv_id) {
-    const { data } = await insforge.database
-      .from('cvs')
-      .select('data')
-      .eq('id', cv_id)
-      .eq('user_id', req.user.id)
-      .maybeSingle();
-    cvData = data?.data || null;
+    try {
+      const [row] = await sql`
+        SELECT data FROM cvs WHERE id = ${cv_id} AND user_id = ${req.user.id} LIMIT 1
+      `;
+      cvData = row?.data || null;
+    } catch (err) {
+      console.error('[DB]', err);
+    }
   }
 
   try {

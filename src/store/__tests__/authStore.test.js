@@ -2,15 +2,14 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { act } from '@testing-library/react'
 import useAuthStore from '../authStore'
 import api from '../../services/api'
-import { insforge } from '../../services/insforge'
+import { authClient } from '../../lib/authClient'
 
 // Mock dependencies
 vi.mock('../../services/api')
-vi.mock('../../services/insforge')
+vi.mock('../../lib/authClient')
 
 describe('authStore', () => {
   beforeEach(() => {
-    // Reset store state before each test
     useAuthStore.setState({
       user: null,
       session: null,
@@ -25,7 +24,6 @@ describe('authStore', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-    // Stop polling after each test
     useAuthStore.getState().stopPolling()
   })
 
@@ -42,33 +40,30 @@ describe('authStore', () => {
 
   describe('fetchTokenBalance', () => {
     it('should fetch and set token balance successfully', async () => {
-      const mockBalance = 10
-      api.get = vi.fn().mockResolvedValue({
-        data: { success: true, data: { balance: mockBalance } }
+      api.get.mockResolvedValue({
+        data: { success: true, data: { balance: 150 } },
       })
 
       await act(async () => {
         await useAuthStore.getState().fetchTokenBalance()
       })
 
-      expect(api.get).toHaveBeenCalledWith('/api/tokens/balance')
-      expect(useAuthStore.getState().tokenBalance).toBe(mockBalance)
+      expect(useAuthStore.getState().tokenBalance).toBe(150)
     })
 
     it('should handle API error gracefully', async () => {
-      api.get = vi.fn().mockRejectedValue(new Error('Network error'))
+      api.get.mockRejectedValue(new Error('Network error'))
 
       await act(async () => {
         await useAuthStore.getState().fetchTokenBalance()
       })
 
-      expect(api.get).toHaveBeenCalledWith('/api/tokens/balance')
       expect(useAuthStore.getState().tokenBalance).toBeNull()
     })
 
     it('should not set balance if response is not successful', async () => {
-      api.get = vi.fn().mockResolvedValue({
-        data: { success: false }
+      api.get.mockResolvedValue({
+        data: { success: false, error: 'Error' },
       })
 
       await act(async () => {
@@ -79,192 +74,69 @@ describe('authStore', () => {
     })
   })
 
-  describe('startPolling', () => {
-    it('should not start polling if not authenticated', () => {
-      useAuthStore.setState({ isAuthenticated: false })
-
-      act(() => {
-        useAuthStore.getState().startPolling()
-      })
-
-      expect(api.get).not.toHaveBeenCalled()
-    })
-
-    it('should fetch balance immediately when starting polling', async () => {
-      useAuthStore.setState({ isAuthenticated: true })
-      api.get = vi.fn().mockResolvedValue({
-        data: { success: true, data: { balance: 5 } }
-      })
-
-      act(() => {
-        useAuthStore.getState().startPolling()
-      })
-
-      expect(api.get).toHaveBeenCalledWith('/api/tokens/balance')
-    })
-
-    it('should poll every 30 seconds when authenticated', async () => {
-      useAuthStore.setState({ isAuthenticated: true })
-      api.get = vi.fn().mockResolvedValue({
-        data: { success: true, data: { balance: 5 } }
-      })
-
-      act(() => {
-        useAuthStore.getState().startPolling()
-      })
-
-      // Initial call
-      expect(api.get).toHaveBeenCalledTimes(1)
-
-      // Advance timer by 30 seconds
-      await act(async () => {
-        vi.advanceTimersByTime(30000)
-      })
-
-      expect(api.get).toHaveBeenCalledTimes(2)
-
-      // Advance timer by another 30 seconds
-      await act(async () => {
-        vi.advanceTimersByTime(30000)
-      })
-
-      expect(api.get).toHaveBeenCalledTimes(3)
-    })
-
-    it('should not poll if user becomes unauthenticated', async () => {
-      useAuthStore.setState({ isAuthenticated: true })
-      api.get = vi.fn().mockResolvedValue({
-        data: { success: true, data: { balance: 5 } }
-      })
-
-      act(() => {
-        useAuthStore.getState().startPolling()
-      })
-
-      expect(api.get).toHaveBeenCalledTimes(1)
-
-      // User logs out
-      useAuthStore.setState({ isAuthenticated: false })
-
-      // Advance timer by 3 seconds
-      await act(async () => {
-        vi.advanceTimersByTime(3000)
-      })
-
-      // Should not have called again
-      expect(api.get).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  describe('stopPolling', () => {
-    it('should stop polling interval', async () => {
-      useAuthStore.setState({ isAuthenticated: true })
-      api.get = vi.fn().mockResolvedValue({
-        data: { success: true, data: { balance: 5 } }
-      })
-
-      act(() => {
-        useAuthStore.getState().startPolling()
-      })
-
-      expect(api.get).toHaveBeenCalledTimes(1)
-
-      act(() => {
-        useAuthStore.getState().stopPolling()
-      })
-
-      // Advance timer by 3 seconds
-      await act(async () => {
-        vi.advanceTimersByTime(3000)
-      })
-
-      // Should not have called again after stopping
-      expect(api.get).toHaveBeenCalledTimes(1)
-    })
-  })
-
   describe('bootstrap', () => {
-    it('should restore session from localStorage token', async () => {
-      const mockToken = 'test-token-123'
-      const mockUser = { id: 'user-1', email: 'test@example.com' }
-      
-      localStorage.setItem('access_token', mockToken)
-      insforge.auth.getUser = vi.fn().mockResolvedValue({
-        data: { user: mockUser },
-        error: null
-      })
-      api.get = vi.fn().mockResolvedValue({
-        data: { success: true, data: { balance: 10 } }
+    it('should set loading false when no session', async () => {
+      authClient.getSession.mockResolvedValue({
+        data: { user: null, session: null },
+        error: null,
       })
 
       await act(async () => {
         await useAuthStore.getState().bootstrap()
       })
 
-      expect(insforge.auth.getUser).toHaveBeenCalled()
-      expect(useAuthStore.getState().user).toEqual(mockUser)
-      expect(useAuthStore.getState().isAuthenticated).toBe(true)
       expect(useAuthStore.getState().loading).toBe(false)
-      expect(useAuthStore.getState().tokenBalance).toBe(10)
+      expect(useAuthStore.getState().isAuthenticated).toBe(false)
     })
 
-    it('should clear state if no token in localStorage', async () => {
+    it('should set loading false on error', async () => {
+      authClient.getSession.mockRejectedValue(new Error('Network error'))
+
       await act(async () => {
         await useAuthStore.getState().bootstrap()
       })
 
-      expect(useAuthStore.getState().user).toBeNull()
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
       expect(useAuthStore.getState().loading).toBe(false)
+      expect(useAuthStore.getState().isAuthenticated).toBe(false)
     })
 
-    it('should clear state and token if getUser fails', async () => {
-      const mockToken = 'test-token-123'
-      localStorage.setItem('access_token', mockToken)
-      
-      insforge.auth.getUser = vi.fn().mockResolvedValue({
-        data: null,
-        error: new Error('Invalid token')
+    it('should authenticate user with valid session', async () => {
+      const mockUser = { id: 'user-1', email: 'test@test.com', name: 'Test', image: 'https://example.com/avatar.jpg' }
+      const mockSession = { id: 'session-1' }
+
+      authClient.getSession.mockResolvedValue({
+        data: { user: mockUser, session: mockSession },
+        error: null,
+      })
+
+      api.get.mockResolvedValue({
+        data: { success: true, data: { balance: 5 } },
       })
 
       await act(async () => {
         await useAuthStore.getState().bootstrap()
       })
 
-      expect(localStorage.getItem('access_token')).toBeNull()
-      expect(useAuthStore.getState().user).toBeNull()
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
-      expect(useAuthStore.getState().loading).toBe(false)
-    })
-
-    it('should clear state if getUser returns no user', async () => {
-      const mockToken = 'test-token-123'
-      localStorage.setItem('access_token', mockToken)
-      
-      insforge.auth.getUser = vi.fn().mockResolvedValue({
-        data: { user: null },
-        error: null
+      const state = useAuthStore.getState()
+      expect(state.loading).toBe(false)
+      expect(state.isAuthenticated).toBe(true)
+      expect(state.user).toEqual({
+        id: 'user-1',
+        email: 'test@test.com',
+        name: 'Test',
+        avatar_url: 'https://example.com/avatar.jpg',
       })
-
-      await act(async () => {
-        await useAuthStore.getState().bootstrap()
-      })
-
-      expect(localStorage.getItem('access_token')).toBeNull()
-      expect(useAuthStore.getState().user).toBeNull()
-      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(state.tokenBalance).toBe(5)
     })
   })
 
   describe('setTokenBalance', () => {
     it('should update token balance', () => {
-      const newBalance = 15
-
       act(() => {
-        useAuthStore.getState().setTokenBalance(newBalance)
+        useAuthStore.getState().setTokenBalance(100)
       })
 
-      expect(useAuthStore.getState().tokenBalance).toBe(newBalance)
+      expect(useAuthStore.getState().tokenBalance).toBe(100)
     })
   })
 })

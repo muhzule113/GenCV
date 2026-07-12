@@ -1,9 +1,2 @@
-import { Router } from 'express';
-import { register } from '../controllers/authController.js';
-
-const router = Router();
-
-// No requireAuth — registration is public
-router.post('/register', register);
-
-export default router;
+// Auth routes are handled by Better Auth via auth.handler in app.js
+// No custom routes needed — all auth endpoints are at /api/auth/*

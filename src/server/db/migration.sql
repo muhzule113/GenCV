@@ -94,9 +94,9 @@ AS $$
   RETURNING balance;
 $$;
 
--- Attach trigger to auth.users (InsForge auth table)
-DROP TRIGGER IF EXISTS trg_grant_signup_tokens ON auth.users;
+-- Attach trigger to public.user (Better Auth)
+DROP TRIGGER IF EXISTS trg_grant_signup_tokens ON public.user;
 CREATE TRIGGER trg_grant_signup_tokens
-  AFTER INSERT ON auth.users
+  AFTER INSERT ON public.user
   FOR EACH ROW
   EXECUTE FUNCTION grant_signup_tokens();

@@ -8,7 +8,7 @@
 -- ============================================================
 CREATE TABLE IF NOT EXISTS payment_transactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id),
+  user_id UUID NOT NULL REFERENCES public.user(id),
   order_id TEXT NOT NULL UNIQUE,
   package_id VARCHAR(20) REFERENCES token_packages(id),
   tokens INTEGER NOT NULL,

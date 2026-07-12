@@ -1,6 +1,24 @@
 version: "3.9"
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: gencv-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gencv
+      POSTGRES_USER: gencv_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gencv_user -d gencv"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     container_name: gencv-api
@@ -9,10 +27,12 @@ services:
       - "5000:5000"
     env_file:
       - .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
-      # CLIENT_URL = domain production. Bisa comma-separated
-      # Contoh: CLIENT_URL=https://gencv.com,https://www.gencv.com
+      - DATABASE_URL=postgres://gencv_user:${DB_PASSWORD}@postgres:5432/gencv
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/healthz"]
       interval: 30s
@@ -24,3 +44,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  pgdata:

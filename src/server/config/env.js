@@ -15,10 +15,12 @@ function parseClientUrls(val) {
 export const config = {
   port: process.env.PORT || 5000,
   nodeEnv,
-  insforge: {
-    url: process.env.INSFORGE_URL,
-    serviceKey: process.env.INSFORGE_SERVICE_KEY,
-    anonKey: process.env.INSFORGE_ANON_KEY,
+  database: {
+    url: process.env.DATABASE_URL,
+  },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   },
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY,

@@ -1,157 +1,156 @@
 import crypto from 'crypto';
-import { insforge } from '../config/insforge.js';
+import postgres from 'postgres';
+import { config } from '../config/env.js';
 import { refundToken } from '../middleware/tokenMiddleware.js';
+
+const sql = postgres(config.database.url);
 
 export async function listCVs(req, res) {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const from = (page - 1) * limit;
-  const to = from + limit - 1;
 
-  const { data, error, count } = await insforge.database
-    .from('cvs')
-    .select('id, title, template_id, share_token, created_at, updated_at', { count: 'exact' })
-    .eq('user_id', req.user.id)
-    .order('created_at', { ascending: false })
-    .range(from, to);
+  try {
+    const rows = await sql`
+      SELECT id, title, template_id, share_token, created_at, updated_at,
+             COUNT(*) OVER() AS total_count
+      FROM cvs
+      WHERE user_id = ${req.user.id}
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+      OFFSET ${from}
+    `;
 
-  if (error) {
+    const data = rows.map(({ total_count, ...rest }) => rest);
+    const count = rows.length > 0 ? Number(rows[0].total_count) : 0;
+
+    res.json({
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total: count,
+        totalPages: Math.ceil(count / limit),
+      },
+    });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-
-  res.json({
-    success: true,
-    data,
-    pagination: {
-      page,
-      limit,
-      total: count,
-      totalPages: Math.ceil(count / limit),
-    },
-  });
 }
 
 export async function createCV(req, res) {
   const { title, template_id, data: cvData } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
 
-  const { data, error } = await insforge.database
-    .from('cvs')
-    .insert({
-      user_id: req.user.id,
-      title,
-      template_id: template_id || 'ats-clean-v1',
-      data: cvData || {},
-    })
-    .select()
-    .single();
+  try {
+    const [data] = await sql`
+      INSERT INTO cvs (user_id, title, template_id, data)
+      VALUES (${req.user.id}, ${title}, ${template_id || 'ats-clean-v1'}, ${sql.json(cvData || {})})
+      RETURNING *
+    `;
 
-  if (error) {
+    res.status(201).json({ success: true, data });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-
-  res.status(201).json({ success: true, data });
 }
 
 export async function getCV(req, res) {
-  const { data, error } = await insforge.database
-    .from('cvs')
-    .select('*')
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
+  try {
+    const [data] = await sql`
+      SELECT *
+      FROM cvs
+      WHERE id = ${req.params.id}
+        AND user_id = ${req.user.id}
+      LIMIT 1
+    `;
 
-  if (error) {
+    if (!data) return res.status(404).json({ error: 'CV not found' });
+
+    res.json({ success: true, data });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-  if (!data) return res.status(404).json({ error: 'CV not found' });
-
-  res.json({ success: true, data });
 }
 
 export async function updateCV(req, res) {
   const { title, template_id, data: cvData } = req.body;
 
-  const { data, error } = await insforge.database
-    .from('cvs')
-    .update({
-      ...(title && { title }),
-      ...(template_id && { template_id }),
-      ...(cvData && { data: cvData }),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .select()
-    .single();
+  try {
+    const updates = [];
+    if (title !== undefined) updates.push(sql`title = ${title}`);
+    if (template_id !== undefined) updates.push(sql`template_id = ${template_id}`);
+    if (cvData !== undefined) updates.push(sql`data = ${sql.json(cvData)}`);
+    updates.push(sql`updated_at = ${new Date().toISOString()}`);
 
-  if (error) {
+    const [data] = await sql`
+      UPDATE cvs
+      SET ${sql(updates)}
+      WHERE id = ${req.params.id}
+        AND user_id = ${req.user.id}
+      RETURNING *
+    `;
+
+    if (!data) return res.status(404).json({ error: 'CV not found' });
+
+    res.json({ success: true, data });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-  if (!data) return res.status(404).json({ error: 'CV not found' });
-
-  res.json({ success: true, data });
 }
 
 export async function deleteCV(req, res) {
-  const { data: existing } = await insforge.database
-    .from('cvs')
-    .select('id')
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
+  try {
+    const [existing] = await sql`
+      SELECT id FROM cvs
+      WHERE id = ${req.params.id}
+        AND user_id = ${req.user.id}
+      LIMIT 1
+    `;
 
-  if (!existing) return res.status(404).json({ error: 'CV not found' });
+    if (!existing) return res.status(404).json({ error: 'CV not found' });
 
-  const { error } = await insforge.database
-    .from('cvs')
-    .delete()
-    .eq('id', req.params.id);
+    await sql`
+      DELETE FROM cvs
+      WHERE id = ${req.params.id}
+    `;
 
-  if (error) {
+    res.json({ success: true, message: 'CV deleted' });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-  res.json({ success: true, message: 'CV deleted' });
 }
 
 export async function duplicateCV(req, res) {
   const { title: newTitle } = req.body;
 
-  const { data: original, error: fetchError } = await insforge.database
-    .from('cvs')
-    .select('*')
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
+  try {
+    const [original] = await sql`
+      SELECT * FROM cvs
+      WHERE id = ${req.params.id}
+        AND user_id = ${req.user.id}
+      LIMIT 1
+    `;
 
-  if (fetchError) {
-    console.error('[DB]', fetchError);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
-  }
-  if (!original) return res.status(404).json({ error: 'CV not found' });
+    if (!original) return res.status(404).json({ error: 'CV not found' });
 
-  const { data, error } = await insforge.database
-    .from('cvs')
-    .insert({
-      user_id: req.user.id,
-      title: newTitle || `${original.title} (Copy)`,
-      template_id: original.template_id,
-      data: original.data,
-    })
-    .select()
-    .single();
+    const [data] = await sql`
+      INSERT INTO cvs (user_id, title, template_id, data)
+      VALUES (${req.user.id}, ${newTitle || `${original.title} (Copy)`}, ${original.template_id}, ${sql.json(original.data)})
+      RETURNING *
+    `;
 
-  if (error) {
+    res.status(201).json({ success: true, data });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-
-  res.status(201).json({ success: true, data });
 }
 
 export async function analyzeJobMatch(req, res) {
@@ -165,17 +164,13 @@ export async function analyzeJobMatch(req, res) {
     // If cvId is provided, fetch CV data from database
     let finalCvData = cvData || {};
     if (cvId) {
-      const { data: cv, error } = await insforge.database
-        .from('cvs')
-        .select('data')
-        .eq('id', cvId)
-        .eq('user_id', req.user.id)
-        .maybeSingle();
+      const [cv] = await sql`
+        SELECT data FROM cvs
+        WHERE id = ${cvId}
+          AND user_id = ${req.user.id}
+        LIMIT 1
+      `;
 
-      if (error) {
-        console.error('[DB]', error);
-        return res.status(500).json({ error: 'Terjadi kesalahan' });
-      }
       if (!cv) {
         return res.status(404).json({ error: 'CV not found' });
       }
@@ -265,61 +260,59 @@ export async function recommendSkills(req, res) {
 }
 
 export async function toggleShare(req, res) {
-  // Check current share state
-  const { data: cv, error: fetchErr } = await insforge.database
-    .from('cvs')
-    .select('id, share_token')
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .maybeSingle();
+  try {
+    // Check current share state
+    const [cv] = await sql`
+      SELECT id, share_token FROM cvs
+      WHERE id = ${req.params.id}
+        AND user_id = ${req.user.id}
+      LIMIT 1
+    `;
 
-  if (fetchErr) {
-    console.error('[DB]', fetchErr);
-    return res.status(500).json({ error: 'Terjadi kesalahan' });
-  }
-  if (!cv) return res.status(404).json({ error: 'CV not found' });
+    if (!cv) return res.status(404).json({ error: 'CV not found' });
 
-  const newToken = cv.share_token ? null : crypto.randomBytes(16).toString('hex');
+    const newToken = cv.share_token ? null : crypto.randomBytes(16).toString('hex');
 
-  const { data, error } = await insforge.database
-    .from('cvs')
-    .update({ share_token: newToken, updated_at: new Date().toISOString() })
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .select('id, share_token')
-    .single();
+    const [data] = await sql`
+      UPDATE cvs
+      SET share_token = ${newToken}, updated_at = ${new Date().toISOString()}
+      WHERE id = ${req.params.id}
+        AND user_id = ${req.user.id}
+      RETURNING id, share_token
+    `;
 
-  if (error) {
+    res.json({
+      success: true,
+      data: {
+        shared: !!data.share_token,
+        share_token: data.share_token,
+      },
+    });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-
-  res.json({
-    success: true,
-    data: {
-      shared: !!data.share_token,
-      share_token: data.share_token,
-    },
-  });
 }
 
 export async function getSharedCV(req, res) {
   const { token } = req.params;
   if (!token || token.length < 16) return res.status(400).json({ error: 'Invalid token' });
 
-  const { data, error } = await insforge.database
-    .from('cvs')
-    .select('title, template_id, data')
-    .eq('share_token', token)
-    .maybeSingle();
+  try {
+    const [data] = await sql`
+      SELECT title, template_id, data
+      FROM cvs
+      WHERE share_token = ${token}
+      LIMIT 1
+    `;
 
-  if (error) {
+    if (!data) return res.status(404).json({ error: 'Shared CV not found or link has been disabled' });
+
+    res.json({ success: true, data });
+  } catch (error) {
     console.error('[DB]', error);
     return res.status(500).json({ error: 'Terjadi kesalahan' });
   }
-  if (!data) return res.status(404).json({ error: 'Shared CV not found or link has been disabled' });
-
-  res.json({ success: true, data });
 }
 
 export async function parseOCRText(req, res) {

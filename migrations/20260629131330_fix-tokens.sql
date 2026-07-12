@@ -10,8 +10,6 @@ AS $$
   DO UPDATE SET balance = user_tokens.balance + p_tokens, updated_at = NOW()
   RETURNING balance;
 $$;
+-- Grant initial 5 tokens via Better Auth trigger (trg_grant_signup_tokens on public.user)
 
 -- Grant initial 5 tokens to existing users who registered before the trigger existed
-INSERT INTO user_tokens (user_id, balance)
-SELECT id, 5 FROM auth.users
-ON CONFLICT (user_id) DO NOTHING;

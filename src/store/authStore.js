@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { insforge } from '../services/insforge'
+import { authClient } from '../lib/authClient'
 import api from '../services/api'
 
 let _pollTimer = null
@@ -10,57 +10,59 @@ const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
   loading: true,
   tokenBalance: null,
+
   fetchTokenBalance: async () => {
     try {
       const { data } = await api.get('/api/tokens/balance')
       if (data?.success) {
         set({ tokenBalance: data.data.balance })
       }
-    } catch { /* token balance is best-effort */ }
+    } catch { /* best-effort */ }
   },
+
   startPolling: () => {
-    const { isAuthenticated } = get()
-    if (!isAuthenticated) return
-    get().fetchTokenBalance()
     if (_pollTimer) clearInterval(_pollTimer)
     _pollTimer = setInterval(() => {
-      if (get().isAuthenticated) {
-        get().fetchTokenBalance()
-      }
+      if (get().isAuthenticated) get().fetchTokenBalance()
     }, 30000)
   },
+
   stopPolling: () => {
-    if (_pollTimer) {
-      clearInterval(_pollTimer)
-      _pollTimer = null
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null }
+  },
+
+  bootstrap: async () => {
+    try {
+      const { data: { user, session }, error } = await authClient.getSession()
+
+      if (error || !session) {
+        set({ loading: false })
+        return
+      }
+
+      set({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.image,
+        },
+        session,
+        isAuthenticated: true,
+        loading: false,
+      })
+      get().fetchTokenBalance()
+      get().startPolling()
+    } catch {
+      set({ loading: false })
     }
   },
-  login: (user, session) => {
-    set({ user, session, isAuthenticated: true, loading: false })
-    get().startPolling()
-  },
+
   logout: () => {
     get().stopPolling()
+    authClient.signOut()
     set({ user: null, session: null, isAuthenticated: false, loading: false, tokenBalance: null })
   },
-  setUser: (user) => set({ user }),
-  setLoading: (loading) => set({ loading }),
-  setTokenBalance: (balance) => set({ tokenBalance: balance }),
-  bootstrap: async () => {
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      set({ user: null, session: null, isAuthenticated: false, loading: false })
-      return
-    }
-    const { data, error } = await insforge.auth.getUser()
-    if (error || !data?.user) {
-      localStorage.removeItem('access_token')
-      set({ user: null, session: null, isAuthenticated: false, loading: false })
-      return
-    }
-    set({ user: data.user, session: { access_token: token }, isAuthenticated: true, loading: false })
-    get().fetchTokenBalance()
-    get().startPolling()
-  },
 }))
+
 export default useAuthStore

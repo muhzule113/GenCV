@@ -15,8 +15,7 @@ import templateRoutes from './routes/templateRoutes.js';
 import tokenRoutes from './routes/tokenRoutes.js';
 import midtransRoutes from './routes/midtransRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
-import authRoutes from './routes/authRoutes.js';
-
+import { auth } from './config/auth.js';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || '',
@@ -33,7 +32,6 @@ app.set('trust proxy', 1);
 const allowedOrigins = config.cors.clientUrls;
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin (server-to-server, curl, etc.)
     if (!origin || allowedOrigins.some(o => origin.startsWith(o))) {
       cb(null, true);
     } else {
@@ -55,7 +53,6 @@ const limiter = rateLimit({
   message: { error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' },
 });
 app.use('/api/', (req, res, next) => {
-  // Skip general limiter for status polling (has its own limiter below)
   if (req.path.match(/^\/tokens\/purchase\/[^/]+\/status$/)) return next();
   limiter(req, res, next);
 });
@@ -82,20 +79,66 @@ app.use('/api/cv/generate-summary', aiLimiter);
 app.use('/api/cv/analyze-job-match', aiLimiter);
 app.use('/api/letter/generate', aiLimiter);
 
-// Stricter rate limit for registration (account farming prevention)
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 jam
-  max: 10,                   // maks 10 registrasi per IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Terlalu banyak percobaan registrasi. Silakan coba lagi nanti.' },
-});
-
 // Health check — no auth, for orchestrator / load balancer
 app.get('/healthz', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-app.use('/api/auth/register', registerLimiter);
+
+// Custom /me endpoint using Better Auth session
+app.get('/api/auth/me', async (req, res) => {
+  const session = await auth.api.getSession({ headers: req.headers });
+  if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  res.json({
+    user: {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      avatar_url: session.user.image,
+      email_verified: session.user.emailVerified,
+    },
+    authenticated: true,
+  });
+});
+
+// Better Auth handler — native Web API (Request→Response), bridge from Express
+app.use('/api/auth', async (req, res, next) => {
+  try {
+    const host = req.get('host') || `localhost:${config.port}`;
+    const proto = req.protocol || 'http';
+    const url = `${proto}://${host}${req.originalUrl}`;
+
+    // Build headers from Express req
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (Array.isArray(value)) value.forEach(v => headers.append(key, v));
+      else if (value) headers.set(key, value);
+    }
+
+    // Build body
+    let body = undefined;
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+      body = JSON.stringify(req.body);
+      if (!headers.has('content-type')) headers.set('content-type', 'application/json');
+    }
+
+    const nativeReq = new Request(url, {
+      method: req.method,
+      headers,
+      body,
+    });
+
+    const nativeRes = await auth.handler(nativeReq);
+
+    // Write Express response from native Response
+    res.status(nativeRes.status);
+    nativeRes.headers.forEach((value, key) => res.setHeader(key, value));
+    const text = await nativeRes.text();
+    if (text) res.send(text);
+    else res.end();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -106,24 +149,24 @@ app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
+
 // Production: serve built frontend from dist/
 if (config.nodeEnv === 'production') {
   const distPath = new URL('../../../dist', import.meta.url).pathname;
   app.use(express.static(distPath));
-  // SPA fallback — semua route non-API ke index.html
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api/')) return next();
     res.sendFile(distPath + '/index.html');
   });
 }
 
+// API Routes
 app.use('/api/cv', cvRoutes);
 app.use('/api/letter', letterRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/midtrans', midtransRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/auth', authRoutes);
 app.use(Sentry.expressErrorHandler());
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', { error: err.message, stack: err.stack });
@@ -135,21 +178,20 @@ const server = app.listen(config.port, () => {
 });
 
 // Prevent hanging connections on slow upstreams
-server.timeout = 30000;       // 30s per request
+server.timeout = 30000;
 server.keepAliveTimeout = 5000;
-server.headersTimeout = 6500; // > keepAliveTimeout
+server.headersTimeout = 6500;
 
 function shutdown(signal) {
-  logger.info(`${signal} received — shutting down gracefully...`);
+  logger.info(`Received ${signal}, shutting down gracefully...`);
   server.close(() => {
-    logger.info('Server closed');
+    logger.info('HTTP server closed');
     process.exit(0);
   });
-  // Force exit after 10s
   setTimeout(() => {
-    logger.error('Forced shutdown after timeout');
+    logger.warn('Forced shutdown after timeout');
     process.exit(1);
-  }, 10000).unref();
+  }, 10000);
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));

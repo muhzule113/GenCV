@@ -5,12 +5,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
-
 api.interceptors.response.use(
   (res) => {
     const tokenBalance = res.data?.tokenBalance ?? res.data?.data?.tokenBalance
@@ -27,25 +21,9 @@ api.interceptors.response.use(
   },
   (err) => {
     const status = err.response?.status
-    // Only logout on genuine auth rejection. 503/500/network = upstream hiccup,
-    // user is still authenticated — don't punish them with logout.
-    if (status === 401) {
-      localStorage.removeItem('access_token')
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        window.location.href = '/login?expired=1'
-      }
-    }
-    if (status === 403 && err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
-      localStorage.removeItem('access_token')
-      const msg = err.response?.data?.error || 'Email belum diverifikasi'
-      import('../store/toastStore').then((m) => m.default.getState().addToast(msg, 'error'))
-      window.location.href = '/register?email_not_verified=1'
-      return
-    }
     if (status === 402 && window.location.pathname !== '/tokens') {
       window.location.href = '/tokens?insufficient=1'
     }
-    // 429 / 503 / network: reject silently, caller handles retry
     return Promise.reject(err)
   }
 )

@@ -42,3 +42,11 @@ dist-ssr
 .roo
 .trae
 .windsurf
+# Drizzle generated migration metadata
+drizzle/
+
+# Internal migration/planning docs
+gencv-supabase-migration.md
+
+# Server logs from background runs
+server.log
