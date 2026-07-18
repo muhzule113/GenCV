@@ -38,6 +38,9 @@ app.use(cors({
       cb(new Error('Not allowed by CORS'));
     }
   },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '5mb' }));
 
@@ -99,6 +102,48 @@ app.get('/api/auth/me', async (req, res) => {
     authenticated: true,
   });
 });
+
+// Tolak daftar manual jika email sudah ada (mis. lewat Google) —
+// Better Auth default-nya mengembalikan sukses palsu (anti-enumeration).
+app.post('/api/auth/sign-up/email', async (req, res, next) => {
+  try {
+    const { getEmailRegistrationStatus } = await import('./config/otpRateLimit.js')
+    const status = await getEmailRegistrationStatus(req.body?.email)
+    if (status.exists) {
+      return res.status(400).json({
+        message: status.message,
+        error: status.message,
+        code: 'EMAIL_ALREADY_REGISTERED',
+      })
+    }
+    return next()
+  } catch (err) {
+    return next(err)
+  }
+})
+
+// Rate-limit OTP + blokir email yang sudah terverifikasi
+app.post('/api/auth/email-otp/send-verification-otp', async (req, res, next) => {
+  try {
+    const email = req.body?.email
+    const type = req.body?.type || 'email-verification'
+    const { assertOtpSendAllowed } = await import('./config/otpRateLimit.js')
+    const gate = await assertOtpSendAllowed(email, { type })
+    if (!gate.ok) {
+      const status = gate.code === 'EMAIL_ALREADY_REGISTERED' ? 400 : 429
+      return res.status(status).json({
+        message: gate.message,
+        error: gate.message,
+        code: gate.code,
+        retryAfterSec: gate.retryAfterSec ?? null,
+        remaining: gate.remaining ?? 0,
+      })
+    }
+    return next()
+  } catch (err) {
+    return next(err)
+  }
+})
 
 // Better Auth handler — native Web API (Request→Response), bridge from Express
 app.use('/api/auth', async (req, res, next) => {

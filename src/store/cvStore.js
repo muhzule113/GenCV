@@ -19,28 +19,22 @@ const initialState = {
   },
 }
 
-function loadProfile() {
-  try {
-    const raw = localStorage.getItem('gencv-profile')
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return null
-}
-
 function createInitialData() {
-  const profile = loadProfile()
-  if (!profile) return { ...initialState }
-
   return {
     ...initialState,
-    personal: { ...initialPersonal, ...(profile.personal || {}) },
-    summary: profile.summary || '',
-    experiences: profile.experiences || [],
-    educations: profile.educations || [],
-    skills: profile.skills || { technical: [], soft: [] },
-    projects: profile.projects || [],
-    certifications: profile.certifications || [],
-    languages: profile.languages || [],
+    personal: { ...initialPersonal },
+    skills: { technical: [], soft: [] },
+    experiences: [],
+    educations: [],
+    projects: [],
+    certifications: [],
+    languages: [],
+    jobAnalysis: {
+      jobDescription: '',
+      position: '',
+      result: null,
+      loading: false,
+    },
   }
 }
 
@@ -56,14 +50,14 @@ const useCVStore = create((set) => ({
   updateData: (field, value) => set((state) => ({ cvData: { ...state.cvData, [field]: value } })),
 
   setCvData: (data) => {
-    const profile = loadProfile()
-    const merged = {
-      ...initialState,
-      ...data,
-      personal: { ...initialPersonal, ...(profile?.personal || {}), ...(data.personal || {}) },
-      skills: { technical: [], soft: [], ...(profile?.skills || {}), ...(data.skills || {}) },
-    }
-    set({ cvData: merged })
+    set({
+      cvData: {
+        ...initialState,
+        ...data,
+        personal: { ...initialPersonal, ...(data.personal || {}) },
+        skills: { technical: [], soft: [], ...(data.skills || {}) },
+      },
+    })
   },
 
   reset: () => set({ currentStep: 0, cvData: createInitialData(), templateId: 'ats-clean-v1', title: 'CV Baru' }),

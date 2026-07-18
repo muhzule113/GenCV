@@ -1,6 +1,6 @@
 /**
  * fetch with AbortController timeout.
- * Prevents hanging requests when upstream (InsForge/Midtrans) is slow.
+ * Prevents hanging requests when upstream (Midtrans / DeepSeek) is slow.
  */
 export async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();

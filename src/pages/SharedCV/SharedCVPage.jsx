@@ -11,7 +11,7 @@ export default function SharedCVPage() {
 
  useEffect(() => {
  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
- fetch(`${baseURL}/api/cv/shared/${token}`)
+ fetch(`${baseURL}/api/cv/shared/${token}`, { credentials: 'include' })
  .then((r) => r.json())
  .then((body) => {
  if (body.success) setCv(body.data)

@@ -5,7 +5,6 @@ import {
   getBalance,
   listPackages,
   createPurchase,
-  confirmPurchase,
   createCharge,
   getPurchaseStatus,
   expirePurchase,
@@ -23,10 +22,10 @@ const router = Router();
 
 router.use(requireAuth);
 
+router.get('/balance', getBalance);
 router.post('/charge', chargeLimiter, createCharge);
 router.get('/packages', listPackages);
 router.post('/purchase', createPurchase);
-router.post('/confirm', confirmPurchase);
 router.get('/purchase/:orderId/status', getPurchaseStatus);
 router.patch('/purchase/:orderId/expire', expirePurchase);
 export default router;

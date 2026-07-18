@@ -6,6 +6,7 @@ import AIActionChip from '../../components/common/AIActionChip'
 import api from '../../services/api'
 import useConfirmStore from '../../store/confirmStore'
 import useProfileStore from '../../store/profileStore'
+import useToastStore from '../../store/toastStore'
 
 const infoSourceOptions = [
   'LinkedIn',
@@ -53,6 +54,7 @@ function ToggleChip({ active, onClick, children }) {
 
 export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, saving = false, loading, existingLetter, onViewExisting, initialSkills }) {
   const requestConfirm = useConfirmStore((s) => s.requestConfirm)
+  const addToast = useToastStore((s) => s.addToast)
   const syncFrom = useProfileStore((s) => s.syncFrom)
   const [cvList, setCvList] = useState([])
   const [isLoadingCV, setIsLoadingCV] = useState(false)
@@ -93,6 +95,9 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
 
   const handleLoadCV = async (cvId) => {
     setForm({ ...form, cv_id: cvId, highlights: [] })
+    setRecommendedHighlights([])
+    setSelectedHighlights([])
+    setCustomHighlight('')
     setCvSkills(null)
     if (onViewExisting) onViewExisting(cvId)
     if (!cvId) return
@@ -142,10 +147,6 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
     )
   }
 
-  const getFinalHighlights = () => {
-    return [...selectedHighlights, customHighlight].filter(Boolean)
-  }
-
   useEffect(() => {
     // Skip initial mount — hanya jalankan saat user benar-benar memilih highlight
     // Cleanup mereset flag agar React StrictMode double-invoke tidak melewati guard ini
@@ -153,26 +154,37 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
       highlightsMounted.current = true
       return () => { highlightsMounted.current = false }
     }
-    const h = [...selectedHighlights, customHighlight].filter(Boolean)
     setForm((prev) =>
-      JSON.stringify(h) !== JSON.stringify(prev.highlights)
-        ? { ...prev, highlights: h }
+      JSON.stringify(selectedHighlights) !== JSON.stringify(prev.highlights)
+        ? { ...prev, highlights: selectedHighlights }
         : prev
     )
-  }, [selectedHighlights, customHighlight, setForm])
+  }, [selectedHighlights, setForm])
 
   const handleLoadRecommendations = async () => {
+    if (!form.position?.trim() || form.position.trim().length <= 3) {
+      addToast('Isi posisi yang dilamar terlebih dahulu (min. 4 karakter)', 'error')
+      return
+    }
+    if (!form.cv_id) {
+      addToast('Pilih CV terlebih dahulu', 'error')
+      return
+    }
     if (!await requestConfirm('Fitur ini akan menggunakan')) return
     setIsLoadingHighlights(true)
     try {
       const { recommendHighlights } = await import('../../services/aiService')
       const result = await recommendHighlights({
-        position: form.position,
+        position: form.position.trim(),
         cv_id: form.cv_id || undefined,
       })
       setRecommendedHighlights(result || [])
       setSelectedHighlights([])
-    } catch {
+      if (!result?.length) {
+        addToast('Tidak ada rekomendasi. Coba tulis poin manual.', 'error')
+      }
+    } catch (err) {
+      addToast(err?.message || 'Gagal memuat rekomendasi AI', 'error')
       const fallback = ['Pengalaman relevan di bidang terkait', 'Kemampuan belajar cepat', 'Komitmen terhadap target', 'Komunikasi efektif', 'Integritas dan etos kerja tinggi']
       setRecommendedHighlights(fallback)
       setSelectedHighlights([])
@@ -181,10 +193,19 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
     }
   }
 
-  const positionLongEnough = form.position?.length > 3
-  const showRecommendBtn = positionLongEnough && recommendedHighlights.length === 0
-  const showRecommendations = recommendedHighlights.length > 0
-  const finalHighlights = getFinalHighlights()
+  const addCustomHighlight = () => {
+    const value = customHighlight.trim()
+    if (!value) return
+    setSelectedHighlights((prev) => (prev.includes(value) ? prev : [...prev, value]))
+    setCustomHighlight('')
+  }
+
+  const removeHighlight = (item) => {
+    setSelectedHighlights((prev) => prev.filter((h) => h !== item))
+  }
+
+  const canRecommend = form.position?.trim().length > 3 && !!form.cv_id
+  const finalHighlights = [...selectedHighlights].filter(Boolean)
 
   const toggleAttachment = (key) => {
     const current = form.attachments?.length ? form.attachments : defaultAttachments
@@ -233,8 +254,10 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-ink">Surat lamaran untuk CV ini sudah ada</p>
-              <p className="text-xs text-muted mt-0.5">Hanya diperbolehkan satu surat per CV. Hapus surat yang ada jika ingin membuat ulang.</p>
+              <p className="text-sm font-semibold text-ink">Surat untuk CV ini sudah ada</p>
+              <p className="text-xs text-muted mt-0.5">
+                Generate akan menimpa isi surat lama. Atau hapus dulu jika ingin mulai dari kosong.
+              </p>
             </div>
           </div>
         </div>
@@ -496,15 +519,25 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
               <h4 className="font-display text-h3 text-ink leading-tight">Poin yang Ingin Ditonjolkan</h4>
               <p className="text-xs text-muted">Bantu AI menonjolkan keunggulanmu yang paling relevan</p>
             </div>
-            {showRecommendBtn && (
-              <AIActionChip icon="sparkles" label="Rekomendasi AI" onClick={handleLoadRecommendations} loading={isLoadingHighlights} />
-            )}
+            <AIActionChip
+              icon="sparkles"
+              label={recommendedHighlights.length ? 'Rekomendasi Ulang' : 'Rekomendasi AI'}
+              onClick={handleLoadRecommendations}
+              loading={isLoadingHighlights}
+              disabled={isLoadingHighlights}
+            />
           </div>
         </div>
         <div className="p-4 space-y-4">
+          {!canRecommend && !isLoadingHighlights && (
+            <p className="text-xs text-muted">
+              Pilih CV dan isi posisi yang dilamar untuk mendapatkan rekomendasi AI, atau tulis poin manual di bawah.
+            </p>
+          )}
+
           {isLoadingHighlights && (
             <div className="flex items-center gap-3 text-sm text-muted p-4">
-              <div className="w-8 h-8 border-2 border-ink" />
+              <div className="w-8 h-8 border-2 border-ink animate-pulse" />
               <div>
                 <p className="font-medium text-ink">AI sedang menganalisis</p>
                 <p className="text-xs">Mencocokkan profil dengan posisi yang dilamar...</p>
@@ -512,7 +545,7 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             </div>
           )}
 
-          {showRecommendations && (
+          {recommendedHighlights.length > 0 && (
             <div className="space-y-2">
               <SectionLabel>Rekomendasi</SectionLabel>
               <div className="space-y-2">
@@ -540,27 +573,43 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             </div>
           )}
 
-          {showRecommendations && (
-            <div>
-              <SectionLabel>Poin Tambahan</SectionLabel>
-              <textarea
+          <div>
+            <SectionLabel>Poin Tambahan</SectionLabel>
+            <div className="flex gap-2 mt-1">
+              <input
+                type="text"
                 value={customHighlight}
                 onChange={(e) => setCustomHighlight(e.target.value)}
-                placeholder="Tulis poin tambahan yang ingin ditonjolkan..."
-                className="field resize-vertical min-h-[70px] mt-1"
-                rows={2}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addCustomHighlight()
+                  }
+                }}
+                placeholder="Tulis poin, lalu Enter atau klik Tambah..."
+                className="field flex-1 min-h-[44px]"
               />
+              <Button type="button" variant="secondary" onClick={addCustomHighlight} disabled={!customHighlight.trim()}>
+                Tambah
+              </Button>
             </div>
-          )}
+          </div>
 
           {finalHighlights.length > 0 && (
             <div className="border border-ink p-4">
               <SectionLabel>Poin Terpilih ({finalHighlights.length})</SectionLabel>
               <div className="flex flex-wrap gap-2 mt-2">
                 {finalHighlights.map((h) => (
-                  <span key={h} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink text-xs text-ink">
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => removeHighlight(h)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink text-xs text-ink hover:bg-ink hover:text-paper transition-colors"
+                    title="Hapus poin"
+                  >
                     {h}
-                  </span>
+                    <span aria-hidden="true">×</span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -575,10 +624,14 @@ export default function LetterForm({ form, setForm, onGenerate, onSaveDraft, sav
             onClick={onGenerate}
             loading={loading}
             size="md"
-            disabled={!form.cv_id || !!existingLetter}
+            disabled={!form.cv_id}
             className="flex-1 sm:flex-none"
           >
-            {loading ? 'AI sedang menulis...' : 'Generate Surat'}
+            {loading
+              ? 'AI sedang menulis...'
+              : existingLetter
+                ? 'Generate Ulang Surat'
+                : 'Generate Surat'}
           </Button>
           <Button variant="secondary" size="md" onClick={onSaveDraft} loading={saving} disabled={!form.cv_id} className="flex-1 sm:flex-none">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

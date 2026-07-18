@@ -28,14 +28,6 @@ function sanitizeFileName(s) {
 }
 
 function buildInitialForm() {
-  const profile = (() => {
-    try {
-      const raw = localStorage.getItem('gencv-profile')
-      if (raw) return JSON.parse(raw)
-    } catch { /* ignore */ }
-    return null
-  })()
-  const p = profile?.personal || {}
   return {
     cv_id: '',
     position: '',
@@ -50,15 +42,15 @@ function buildInitialForm() {
     customAttachment: '',
     relevantExperience: '',
     personal: {
-      name: p.name || '',
-      email: p.email || '',
-      phone: p.phone || '',
-      address: p.address || '',
-      birthPlace: p.birthPlace || '',
-      birthDate: p.birthDate || '',
-      gender: p.gender || '',
-      lastEducation: p.lastEducation || '',
-      portfolio: p.portfolio || '',
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      birthPlace: '',
+      birthDate: '',
+      gender: '',
+      lastEducation: '',
+      portfolio: '',
     },
   }
 }
@@ -162,7 +154,7 @@ export default function LetterBuilderPage() {
       addToast(err, 'error')
       return
     }
-    if (!await requestConfirm('Fitur ini akan menggunakan')) return
+    if (!await requestConfirm('Generate surat AI akan memakai')) return
     await generateLetter(form)
   }
 
@@ -292,15 +284,20 @@ export default function LetterBuilderPage() {
             </div>
             <div className={`${showPreview ? 'block' : 'hidden'} lg:block`}>
               {existingLetter && !letter ? (
-                <div className="border border-danger p-4 sm:p-6">
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-danger mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                <div className="border border-warning p-4 sm:p-6">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-warning mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                   </svg>
                   <p className="text-ink font-medium text-center">Surat untuk CV ini sudah ada</p>
-                  <p className="text-muted text-sm text-center mt-1">Hanya 1 surat per CV diperbolehkan.</p>
-                  <div className="flex justify-center mt-4">
+                  <p className="text-muted text-sm text-center mt-1">
+                    Klik <span className="text-ink font-medium">Generate Ulang Surat</span> untuk menimpa isi, atau hapus surat lama.
+                  </p>
+                  <div className="flex flex-col sm:flex-row justify-center gap-2 mt-4">
+                    <Button size="sm" onClick={handleGenerate} loading={loading}>
+                      Generate Ulang
+                    </Button>
                     <Button variant="danger" size="sm" onClick={handleDeleteExisting}>
-                      Hapus Surat & Buat Baru
+                      Hapus Surat Lama
                     </Button>
                   </div>
                 </div>

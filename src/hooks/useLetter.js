@@ -58,21 +58,16 @@ export default function useLetter() {
     onSuccess: (response) => {
       const data = response.data.data
       setLetter(data)
-      setExistingLetter({ id: data.cv_id })
+      setExistingLetter(data?.id ? { id: data.id, cv_id: data.cv_id } : null)
       fetchTokenBalance()
       queryClient.invalidateQueries({ queryKey: letterKeys.all })
       addToast('Surat lamaran berhasil digenerate!', 'success')
     },
     onError: (err) => {
-      if (err.response?.status === 409) {
-        const msg = 'Surat lamaran untuk CV ini sudah ada. Hapus surat yang ada terlebih dahulu.'
-        addToast(msg, 'error')
-        if (err.response.data?.existing_id) {
-          setExistingLetter({ id: err.response.data.existing_id })
-        }
-      } else {
-        const message = err.response?.data?.error || 'Gagal generate surat'
-        addToast(message, 'error')
+      const message = err.response?.data?.error || 'Gagal generate surat'
+      addToast(message, 'error')
+      if (err.response?.status === 409 && err.response.data?.existing_id) {
+        setExistingLetter({ id: err.response.data.existing_id })
       }
     },
   })

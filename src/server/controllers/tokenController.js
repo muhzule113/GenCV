@@ -89,7 +89,14 @@ export async function createPurchase(req, res) {
       console.error('Midtrans Snap network error:', snapErr);
     }
 
-    // Create payment_transactions record
+    if (!snapToken) {
+      await sql`
+        UPDATE token_purchases SET status = 'failed'
+        WHERE id = ${purchase.id}
+      `.catch(() => {});
+      return res.status(502).json({ error: 'Gagal membuat sesi pembayaran Midtrans' });
+    }
+
     await sql`
       INSERT INTO payment_transactions (user_id, order_id, package_id, tokens, amount, status, snap_token)
       VALUES (${req.user.id}, ${orderId}, ${package_id}, ${pkg.tokens}, ${pkg.price}, 'pending', ${snapToken})
@@ -98,36 +105,11 @@ export async function createPurchase(req, res) {
     res.status(201).json({
       success: true,
       data: { ...purchase, snap_token: snapToken, order_id: orderId },
-      message: snapToken
-        ? 'Pesanan dibuat. Snap token ready.'
-        : 'Pesanan dibuat (tanpa Midtrans). Lanjutkan via konfirmasi manual.',
+      message: 'Pesanan dibuat. Snap token ready.',
     });
   } catch (err) {
     console.error('createPurchase error:', err);
     res.status(500).json({ error: 'Gagal membuat pesanan' });
-  }
-}
-
-/** POST /api/tokens/confirm */
-export async function confirmPurchase(req, res) {
-  const { purchase_id } = req.body;
-  if (!purchase_id) return res.status(400).json({ error: 'purchase_id wajib diisi' });
-
-  try {
-    const [updated] = await sql`
-      UPDATE token_purchases SET status = 'completed', paid_at = NOW()
-      WHERE id = ${purchase_id} AND user_id = ${req.user.id} AND status = 'pending'
-      RETURNING tokens
-    `;
-    if (!updated) return res.status(404).json({ error: 'Pesanan tidak ditemukan atau sudah diproses' });
-
-    // Add tokens via RPC
-    await sql`SELECT * FROM add_tokens(${req.user.id}, ${updated.tokens})`;
-
-    res.json({ success: true, message: 'Token berhasil ditambahkan' });
-  } catch (err) {
-    console.error('confirmPurchase error:', err);
-    res.status(500).json({ error: 'Gagal mengkonfirmasi pembayaran' });
   }
 }
 
@@ -329,7 +311,10 @@ export async function expirePurchase(req, res) {
   const { orderId } = req.params;
   if (!orderId) return res.status(400).json({ error: 'order_id wajib diisi' });
   try {
-    await sql`UPDATE payment_transactions SET status = 'expired' WHERE order_id = ${orderId}`;
+    await sql`
+      UPDATE payment_transactions SET status = 'expired'
+      WHERE order_id = ${orderId} AND user_id = ${req.user.id} AND status = 'pending'
+    `;
     return res.json({ success: true });
   } catch (err) {
     console.error('expirePurchase error:', err);

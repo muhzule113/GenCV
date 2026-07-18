@@ -2,6 +2,8 @@
 **Product Requirements Document**
 Versi: 3.0 | Tanggal: Juni 2026 | Status: Final Draft
 
+> **Stack update (Jul 2026):** runtime is **Better Auth + Express + self-hosted PostgreSQL**. InsForge / `@insforge/sdk` / `auth.users` RLS snippets below are historical — do not implement them. See `AGENTS.md` and `migrations/0001_init.sql`.
+
 ---
 
 ## 1. Ringkasan Produk
@@ -54,21 +56,17 @@ Banyak pencari kerja kesulitan membuat CV yang lolos sistem ATS (Applicant Track
 | **Frontend** | React.js (Vite) | UI utama |
 | **Styling** | Tailwind CSS v3 | Utility-first styling |
 | **Backend** | Node.js + Express.js | REST API server |
-| **Database** | InsForge (Postgres) | DB + Auth + SDK bawaan |
-| **Autentikasi** | InsForge Auth | JWT, email/password, OAuth built-in |
+| **Database** | PostgreSQL (self-hosted / Docker) | `DATABASE_URL` + `postgres` driver |
+| **Autentikasi** | Better Auth | Email/password + Google OAuth, session cookies |
 | **AI Generate** | DeepSeek V4 Flash | Generate teks CV & surat lamaran |
 | **PDF Export** | @react-pdf/renderer | Render & download PDF di sisi client |
 | **State Management** | Zustand | Lightweight global state |
 | **HTTP Client** | Axios | Request ke backend |
 
-### Catatan Penting InsForge
-InsForge adalah platform **agent-native cloud infrastructure** (mirip Supabase) yang menyediakan:
-- **Postgres database** dengan REST/SDK endpoint otomatis per tabel
-- **Auth built-in** — JWT, email/password, OAuth (Google, GitHub, dll)
-- **TypeScript SDK** (`@insforge/client`) untuk query DB & auth dari frontend/backend
-- **Row-Level Security (RLS)** — keamanan data per-user langsung di level DB
-- **Model Gateway** — opsional, bisa dipakai untuk routing AI request
-- Tidak perlu setup auth dari nol; InsForge menangani sesi & token
+### Catatan database & auth
+- Schema bootstrap: `migrations/0001_init.sql` (`npm run db:migrate`)
+- Auth client: `src/lib/authClient.js` — **bukan** InsForge SDK
+- Tidak pakai PostgREST / InsForge RLS; isolasi data di Express middleware
 
 ---
 
@@ -986,7 +984,7 @@ Semua template CV yang dihasilkan wajib memenuhi:
 |--------|--------|----------|
 | AI DeepSeek generate teks tidak relevan | Tinggi | Prompt engineering yang ketat + opsi edit manual wajib tersedia |
 | `@react-pdf/renderer` lambat di mobile | Sedang | Batasi jumlah elemen, kompres font, lazy render |
-| InsForge RLS salah config → data bocor | Tinggi | Test RLS policy di staging sebelum deploy, service key hanya di backend |
+| Token/session auth salah config → data bocor | Tinggi | Proteksi di Express middleware + test route auth |
 | DeepSeek API down | Sedang | Error handling ramah, teks bisa diisi manual tanpa AI |
 | Format PDF tidak konsisten lintas browser | Rendah | react-pdf render server-side font, tidak bergantung browser font |
 
@@ -994,27 +992,24 @@ Semua template CV yang dihasilkan wajib memenuhi:
 
 ## 18. Environment Variables
 
-### Frontend (`.env`)
-```env
-VITE_INSFORGE_URL=https://<project-id>.insforge.dev
-VITE_INSFORGE_ANON_KEY=anon_...
-VITE_API_BASE_URL=http://localhost:5000
-```
+Lihat `.env.example` (sumber kebenaran). Ringkas:
 
-### Backend (`.env`)
 ```env
 PORT=5000
 NODE_ENV=development
-
-# InsForge
-INSFORGE_URL=https://<project-id>.insforge.dev
-INSFORGE_SERVICE_KEY=service_...   # bypass RLS, JANGAN expose ke client
-
-# DeepSeek
-DEEPSEEK_API_KEY=sk-...
-
-# CORS
-CLIENT_URL=http://localhost:3000
+DB_PASSWORD=gencv_dev_password
+DATABASE_URL=postgres://gencv_user:gencv_dev_password@127.0.0.1:5432/gencv
+BETTER_AUTH_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+DEEPSEEK_API_KEY=
+CLIENT_URL=http://localhost:5173
+MIDTRANS_SERVER_KEY=
+MIDTRANS_IS_PRODUCTION=false
+MIDTRANS_CLIENT_KEY=
+VITE_MIDTRANS_CLIENT_KEY=
+VITE_API_BASE_URL=http://localhost:5000
+VITE_APP_URL=http://localhost:5173
 ```
 
 ---

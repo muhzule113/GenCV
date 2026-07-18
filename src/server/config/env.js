@@ -1,13 +1,13 @@
 import dotenv from 'dotenv';
 import { existsSync } from 'fs';
 
-// Load env file based on NODE_ENV
+// Load .env first, then .env.{NODE_ENV} overrides
 const nodeEnv = process.env.NODE_ENV || 'development';
+dotenv.config();
 const envFile = `.env.${nodeEnv}`;
 if (existsSync(envFile)) {
-  dotenv.config({ path: envFile });
+  dotenv.config({ path: envFile, override: true });
 }
-dotenv.config(); // .env always loaded as base
 
 function parseClientUrls(val) {
   return val ? val.split(',').map(s => s.trim()) : ['http://localhost:5173'];
@@ -37,5 +37,13 @@ export const config = {
   },
   cors: {
     clientUrls: parseClientUrls(process.env.CLIENT_URL),
+  },
+  smtp: {
+    host: (process.env.SMTP_HOST || '').trim(),
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: (process.env.SMTP_USER || '').trim(),
+    pass: (process.env.SMTP_PASS || '').trim(),
+    from: (process.env.SMTP_FROM || process.env.SMTP_USER || 'GenCV <noreply@gencv.local>').trim(),
   },
 };

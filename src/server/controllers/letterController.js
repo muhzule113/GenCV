@@ -198,16 +198,7 @@ export async function generateLetter(req, res) {
 
     const cvData = cvRecord.data;
 
-    const [existing] = await sql`
-      SELECT id FROM cover_letters WHERE cv_id = ${cv_id} AND user_id = ${req.user.id} LIMIT 1
-    `;
-    if (existing) {
-      return res.status(409).json({
-        error: 'Surat lamaran untuk CV ini sudah ada. Hapus surat yang ada terlebih dahulu jika ingin membuat ulang.',
-        existing_id: existing.id,
-      });
-    }
-
+    // Upsert: boleh generate ulang jika draft/surat untuk CV ini sudah ada
     const mergedPersonal = {
       name: cvData?.personal?.name || '',
       email: cvData?.personal?.email || '',
@@ -238,7 +229,7 @@ export async function generateLetter(req, res) {
       relevantExperience: relevant_experience,
     });
 
-    await sql`
+    const [row] = await sql`
       INSERT INTO cover_letters (user_id, cv_id, position, company, content)
       VALUES (${req.user.id}, ${cv_id}, ${position}, ${company}, ${content})
       ON CONFLICT (cv_id, user_id) DO UPDATE SET
@@ -246,11 +237,13 @@ export async function generateLetter(req, res) {
         company = EXCLUDED.company,
         content = EXCLUDED.content,
         updated_at = NOW()
+      RETURNING id, cv_id, position, company, content, created_at, updated_at
     `;
 
     res.json({
       success: true,
       data: {
+        id: row.id,
         content,
         cv_id,
         position,

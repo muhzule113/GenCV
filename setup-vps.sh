@@ -126,7 +126,7 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
   echo ""
   warn "EDIT .env DULU sebelum lanjut:"
   echo "   nano ${INSTALL_DIR}/.env"
-  echo "   Isi: INSFORGE_SERVICE_KEY, DEEPSEEK_API_KEY, MIDTRANS_SERVER_KEY"
+  echo "   Isi: DATABASE_URL / DB_PASSWORD, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET, DEEPSEEK_API_KEY, MIDTRANS_SERVER_KEY"
   echo ""
   read -p "   Udah diedit? (y/n): " -n 1 -r REPLY
   echo
